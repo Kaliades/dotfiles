@@ -25,4 +25,7 @@ New tools should follow the same pattern: `<tool-name>/` containing files in the
 - **Shell**: Zsh with Oh My Zsh + Powerlevel10k, lazy-loaded NVM and pyenv for fast startup
 - **Neovim**: LazyVim distro — plugins in `lua/plugins/`, config in `lua/config/` (options, keymaps, autocmds). Custom plugins go in `lua/plugins/` as new `.lua` files
 - **Claude Code statusline**: Custom bash script that shows working dir, context remaining %, git branch/status, and API usage with reset timer (cached 60s). Reads OAuth token from macOS Keychain
-- **No install script yet** — files are meant to be symlinked manually to `$HOME`
+- **Wymagane narzędzia**: GNU Stow (`brew install stow`), fzf (`brew install fzf`)
+- **Instalacja**: `./install.sh stow` — interaktywny wybór pakietów przez fzf, tworzy symlinki do `$HOME` via stow
+- **Odinstalowanie**: `./install.sh unstow` — usuwa symlinki wybranych pakietów
+- **Status**: `./install.sh status` — pokazuje które pakiety są zainstalowane
