@@ -36,17 +36,28 @@ get_packages() {
     -exec basename {} \; | sort
 }
 
-# Sprawdź czy pakiet jest już zastowowany (czy istnieje symlink wskazujący na nasze repo)
+# Sprawdź czy pakiet jest już zastowowany
+# Stow linkuje katalogi lub pliki — sprawdzamy symlinki na każdym poziomie ścieżki
 is_stowed() {
   local pkg="$1"
   local found=false
   while IFS= read -r -d '' file; do
     local rel="${file#$DOTFILES_DIR/$pkg/}"
     local target="$TARGET_DIR/$rel"
-    if [[ -L "$target" ]] && [[ "$(readlink "$target")" == *"$DOTFILES_DIR/$pkg"* ]]; then
-      found=true
-      break
-    fi
+    # Sprawdź symlinki na każdym poziomie ścieżki (stow linkuje katalogi, nie tylko pliki)
+    local check_path="$TARGET_DIR"
+    local IFS='/'
+    for part in $rel; do
+      check_path="$check_path/$part"
+      if [[ -L "$check_path" ]]; then
+        local resolved
+        resolved="$(realpath "$check_path" 2>/dev/null)" || continue
+        if [[ "$resolved" == "$DOTFILES_DIR/$pkg/"* ]]; then
+          found=true
+          break 2
+        fi
+      fi
+    done
   done < <(find "$DOTFILES_DIR/$pkg" -type f -print0)
   $found
 }
