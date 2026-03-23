@@ -1,11 +1,5 @@
 return {
-  -- Podświetlanie składni Liquid
-  {
-    "Shopify/tree-sitter-liquid",
-    build = ":TSUpdate liquid",
-  },
-
-  -- Rejestracja parsera tree-sitter dla Liquid
+  -- Podświetlanie składni Liquid (tree-sitter)
   {
     "nvim-treesitter/nvim-treesitter",
     opts = {

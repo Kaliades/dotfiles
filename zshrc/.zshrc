@@ -102,6 +102,7 @@ ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 # ============================================================================
 export ENABLE_LSP_TOOL=1
 export XDG_CONFIG_HOME="$HOME/.config"
+export BAT_THEME="gruvbox-dark"
 
 # Sekrety (upewnij się: chmod 600 ~/.secrets)
 [[ -f ~/.secrets ]] && source ~/.secrets
