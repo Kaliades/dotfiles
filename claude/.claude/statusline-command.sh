@@ -22,12 +22,17 @@ input=$(cat)
 
 # --- Current dir ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd')
-if [[ "$cwd" == /Users/simon/Workspace/* ]]; then
-  display_dir="${cwd#/Users/simon/Workspace/}"
+if [[ "$cwd" == "$HOME/Workspace/"* ]]; then
+  dir_icon=""
+  display_dir="${cwd#$HOME/Workspace/}"
+elif [[ "$cwd" == "$HOME"/* ]]; then
+  dir_icon="󰉋"
+  display_dir="~/${cwd#$HOME/}"
 else
+  dir_icon="󰉋"
   display_dir="$cwd"
 fi
-dir_part="${BLUE}${BOLD}󰉋 ${display_dir}${RESET}"
+dir_part="${BLUE}${BOLD}${dir_icon} ${display_dir}${RESET}"
 
 # --- Context remaining ---
 remaining=$(echo "$input" | jq -r '.context_window.remaining_percentage // empty')
@@ -47,7 +52,7 @@ fi
 
 # --- Git branch and status ---
 git_part=""
-if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
+if git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
   branch=$(git -C "$cwd" symbolic-ref --short HEAD 2>/dev/null || git -C "$cwd" rev-parse --short HEAD 2>/dev/null)
   if [ -n "$branch" ]; then
     if git -C "$cwd" status --porcelain 2>/dev/null | grep -q .; then
@@ -60,8 +65,8 @@ fi
 
 # --- Build top line ---
 top_line="$dir_part"
-[ -n "$ctx_part" ]  && top_line="${top_line}${SEP}${ctx_part}"
-[ -n "$git_part" ]  && top_line="${top_line}${SEP}${git_part}"
+[ -n "$ctx_part" ] && top_line="${top_line}${SEP}${ctx_part}"
+[ -n "$git_part" ] && top_line="${top_line}${SEP}${git_part}"
 
 # --- Usage reset timer (5h rolling window from Anthropic API) ---
 # Cache API response for 60 seconds to avoid rate limiting
@@ -72,7 +77,7 @@ now_epoch=$(date +%s)
 
 use_cache=false
 if [ -f "$CACHE_FILE" ]; then
-  cache_age=$(( now_epoch - $(stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0) ))
+  cache_age=$((now_epoch - $(stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)))
   if [ "$cache_age" -lt "$CACHE_MAX_AGE" ]; then
     use_cache=true
   fi
@@ -81,15 +86,15 @@ fi
 if [ "$use_cache" = true ]; then
   usage_json=$(cat "$CACHE_FILE")
 else
-  TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" 2>/dev/null)
+  TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null |
+    python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" 2>/dev/null)
   if [ -n "$TOKEN" ]; then
     usage_json=$(curl -s --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
       -H "Authorization: Bearer $TOKEN" \
       -H "anthropic-beta: oauth-2025-04-20" 2>/dev/null)
     # Only cache valid responses (not errors)
     if echo "$usage_json" | jq -e '.five_hour' >/dev/null 2>&1; then
-      echo "$usage_json" > "$CACHE_FILE"
+      echo "$usage_json" >"$CACHE_FILE"
     elif [ -f "$CACHE_FILE" ]; then
       # Fall back to stale cache on error
       usage_json=$(cat "$CACHE_FILE")
@@ -105,9 +110,9 @@ if [ -n "$usage_json" ]; then
     # Calculate time until reset
     reset_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${resets_at%%.*}" +%s 2>/dev/null)
     if [ -n "$reset_epoch" ] && [ "$reset_epoch" -gt "$now_epoch" ]; then
-      diff=$(( reset_epoch - now_epoch ))
-      rh=$(( diff / 3600 ))
-      rm=$(( (diff % 3600) / 60 ))
+      diff=$((reset_epoch - now_epoch))
+      rh=$((diff / 3600))
+      rm=$(((diff % 3600) / 60))
       if [ "$rh" -gt 0 ]; then
         reset_str=$(printf "%dh %02dm" $rh $rm)
       else
