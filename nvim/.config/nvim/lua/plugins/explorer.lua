@@ -8,6 +8,16 @@ return {
           ignored = true,
           auto_close = true,
         },
+        files = {
+          hidden = true,
+          ignored = true,
+          exclude = { ".git", "build", "node_modules", "out", ".nuxt", ".react-router", ".shopify" },
+        },
+        grep = {
+          hidden = true,
+          ignored = true,
+          exclude = { ".git", "build", "node_modules", "out", ".nuxt", ".react-router", ".shopify" },
+        },
       },
     },
   },
