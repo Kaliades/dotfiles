@@ -8,3 +8,8 @@ background-blur-radius = 20
 
 # Motyw kolorystyczny
 theme = Gruvbox Material
+shell-integration-features = no-cursor
+confirm-close-surface = false
+keybind = shift+enter=text:\x1b\r
+window-save-state = never
+window-decoration = true
