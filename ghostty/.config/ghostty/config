@@ -1,19 +1,10 @@
-#theme = Material Dark
-theme = Elementary
-#theme=Mona Lisa
-font-family = JetBrainsMono NF
-font-size = 17
+# Czcionka
+font-family = "JetBrainsMono Nerd Font Mono"
+font-size = 16
 
+# Wygląd okna i przezroczystość
+background-opacity = 0.99
+background-blur-radius = 20
 
-cursor-color = #7734eb
-cursor-style = block
-cursor-style-blink = false
-shell-integration-features = no-cursor
-
-background-opacity = 0.96
-background-blur = 20
-
-confirm-close-surface = false
-keybind = shift+enter=text:\x1b\r
-window-save-state = never
-window-decoration = true
+# Motyw kolorystyczny
+theme = Gruvbox Material
