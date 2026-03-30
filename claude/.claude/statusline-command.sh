@@ -72,7 +72,7 @@ top_line="$dir_part"
 # Cache API response for 60 seconds to avoid rate limiting
 block_part=""
 CACHE_FILE="/tmp/claude-usage-cache.json"
-CACHE_MAX_AGE=60
+CACHE_MAX_AGE=180
 now_epoch=$(date +%s)
 
 use_cache=false
@@ -108,7 +108,10 @@ if [ -n "$usage_json" ]; then
   if [ -n "$util" ] && [ -n "$resets_at" ]; then
     util_int=$(echo "$util" | awk '{printf "%.0f", $1}')
     # Calculate time until reset
-    reset_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${resets_at%%.*}" +%s 2>/dev/null)
+    # Strip fractional seconds and timezone suffix for macOS date parsing
+    reset_clean="${resets_at%%.*}"
+    reset_clean="${reset_clean%%+*}"
+    reset_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$reset_clean" +%s 2>/dev/null)
     if [ -n "$reset_epoch" ] && [ "$reset_epoch" -gt "$now_epoch" ]; then
       diff=$((reset_epoch - now_epoch))
       rh=$((diff / 3600))
