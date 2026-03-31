@@ -117,5 +117,5 @@ export BAT_THEME="gruvbox-dark"
 
 # Powerlevel10k config
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-## cargo
-[[ ! -f "$HOME/.cargo/env" ]] || source "$HOME/.cargo/env"
+## custom
+[[ ! -f "$HOME/.custom" ]] || source "$HOME/.custom"

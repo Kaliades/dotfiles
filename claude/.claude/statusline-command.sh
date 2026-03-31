@@ -107,22 +107,30 @@ if [ -n "$usage_json" ]; then
   resets_at=$(echo "$usage_json" | jq -r '.five_hour.resets_at // empty' 2>/dev/null)
   if [ -n "$util" ] && [ -n "$resets_at" ]; then
     util_int=$(echo "$util" | awk '{printf "%.0f", $1}')
-    # Calculate time until reset
-    # Strip fractional seconds and timezone suffix for macOS date parsing
-    reset_clean="${resets_at%%.*}"
-    reset_clean="${reset_clean%%+*}"
-    reset_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$reset_clean" +%s 2>/dev/null)
-    if [ -n "$reset_epoch" ] && [ "$reset_epoch" -gt "$now_epoch" ]; then
-      diff=$((reset_epoch - now_epoch))
-      rh=$((diff / 3600))
-      rm=$(((diff % 3600) / 60))
-      if [ "$rh" -gt 0 ]; then
-        reset_str=$(printf "%dh %02dm" $rh $rm)
-      else
-        reset_str=$(printf "%dm" $rm)
-      fi
+    # Calculate time until reset (proper timezone handling)
+    reset_info=$(python3 -c "
+from datetime import datetime
+try:
+    dt = datetime.fromisoformat('$resets_at')
+    local = dt.astimezone()
+    now = datetime.now().astimezone()
+    diff = dt - now
+    total_min = max(0, int(diff.total_seconds()) // 60)
+    h, m = divmod(total_min, 60)
+    if h > 0:
+        remaining = f'{h}h{m:02d}m'
+    else:
+        remaining = f'{m}m'
+    print(f'{local.strftime(\"%H:%M\")}|{remaining}')
+except:
+    print('')
+" 2>/dev/null)
+    if [ -n "$reset_info" ]; then
+      reset_time="${reset_info%%|*}"
+      reset_remaining="${reset_info##*|}"
+      reset_str="${reset_time} (${reset_remaining})"
     else
-      reset_str="now"
+      reset_str="--:--"
     fi
     # Color based on utilization
     if [ "$util_int" -ge 80 ]; then
