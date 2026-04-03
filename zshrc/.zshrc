@@ -45,6 +45,14 @@ export PNPM_HOME="$HOME/Library/pnpm"
 # ============================================================================
 export NVM_DIR="$HOME/.nvm"
 
+# Eager PATH do domyślnego node — Neovim (Mason/LSP) potrzebuje node na PATH
+if [[ -f "$NVM_DIR/alias/default" ]]; then
+  _nvm_default=$(cat "$NVM_DIR/alias/default")
+  _nvm_default_path=$(ls -d "$NVM_DIR/versions/node/v${_nvm_default}"* 2>/dev/null | sort -V | tail -1)
+  [[ -n "$_nvm_default_path" ]] && path=("$_nvm_default_path/bin" $path)
+  unset _nvm_default _nvm_default_path
+fi
+
 nvm() {
   unfunction nvm node npm npx 2>/dev/null
   [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
