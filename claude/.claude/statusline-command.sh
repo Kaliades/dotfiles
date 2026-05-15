@@ -144,9 +144,12 @@ except:
   fi
 fi
 
+# --- Other active Claude sessions ---
+my_sid=$(echo "$input" | jq -r '.session_id // empty' 2>/dev/null)
+others_part=$(CLAUDE_OTHERS_MY_SID="$my_sid" python3 "$HOME/.claude/hooks/_others_status.py" 2>/dev/null)
+
 # --- Output ---
-if [ -n "$block_part" ]; then
-  echo -e "${top_line}\n${block_part}"
-else
-  echo -e "${top_line}"
-fi
+out="$top_line"
+[ -n "$block_part" ] && out="${out}\n${block_part}"
+[ -n "$others_part" ] && out="${out}\n${others_part}"
+echo -e "$out"
