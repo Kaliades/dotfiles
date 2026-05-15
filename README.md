@@ -26,13 +26,15 @@ cd ~/Workspace/dotfiles
 
 ## Pakiety
 
-| Pakiet     | Co zawiera                                              |
-|------------|---------------------------------------------------------|
-| `ghostty`  | Konfiguracja terminala Ghostty                          |
-| `git`      | `.gitconfig` (delta, side-by-side) + Lazygit            |
-| `zshrc`    | Zsh + Oh My Zsh + Powerlevel10k + lazy-loaded NVM/pyenv |
-| `nvim`     | Neovim z LazyVim                                        |
-| `claude`   | Claude Code — custom statusline                         |
+| Pakiet      | Co zawiera                                              |
+|-------------|---------------------------------------------------------|
+| `ghostty`   | Konfiguracja terminala Ghostty                          |
+| `zellij`    | Konfiguracja multipleksera Zellij                       |
+| `git`       | `.gitconfig` (delta, side-by-side) + Lazygit            |
+| `zshrc`     | Zsh + Oh My Zsh + Powerlevel10k + lazy-loaded NVM/pyenv |
+| `nvim`      | Neovim z LazyVim                                        |
+| `aerospace` | Konfiguracja AeroSpace (tiling WM)                      |
+| `claude`    | Claude Code — custom statusline                         |
 
 ## Struktura
 
