@@ -105,6 +105,31 @@ serve() { python3 -m http.server "${1:-8000}"; }
 # Znajdź plik po nazwie
 ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 
+# cj — picker sesji Claude'a w Zellij (fzf + go-to-tab-by-id / switch-session)
+cj() {
+  [[ -z "$ZELLIJ" ]] && { print -u2 "cj: wymaga Zellija"; return 1 }
+  command -v fzf >/dev/null || { print -u2 "cj: wymagany fzf"; return 1 }
+
+  local rows picked emoji zsess tab_id name state sid
+  rows="$(python3 "$HOME/.claude/hooks/_cj.py" 2>/dev/null)"
+  [[ -z "$rows" ]] && { print -u2 "cj: brak aktywnych Claude'ów"; return 1 }
+
+  picked="$(printf '%s\n' "$rows" \
+    | fzf --ansi --with-nth=1,2,4,5 --delimiter=$'\t' \
+          --prompt='Claude > ' --height=40% --reverse \
+          --preview='echo {}' --preview-window=down:1)" || return 0
+
+  IFS=$'\t' read -r emoji zsess tab_id name state sid <<< "$picked"
+  [[ -z "$tab_id" || -z "$zsess" ]] && return 1
+
+  if [[ "$zsess" == "$ZELLIJ_SESSION_NAME" ]]; then
+    zellij action go-to-tab-by-id "$tab_id"
+  else
+    zellij -s "$zsess" action go-to-tab-by-id "$tab_id" 2>/dev/null
+    zellij action switch-session "$zsess"
+  fi
+}
+
 # ============================================================================
 # Środowisko
 # ============================================================================
