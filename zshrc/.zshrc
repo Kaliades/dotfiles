@@ -106,21 +106,22 @@ serve() { python3 -m http.server "${1:-8000}"; }
 ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 
 # cj — picker sesji Claude'a w Zellij (fzf + go-to-tab-by-id / switch-session)
+# Output _cj.py: <display>\t<zsess>\t<tab_id>\t<sid>. Header rows maja puste tab_id.
 cj() {
   [[ -z "$ZELLIJ" ]] && { print -u2 "cj: wymaga Zellija"; return 1 }
   command -v fzf >/dev/null || { print -u2 "cj: wymagany fzf"; return 1 }
 
-  local rows picked emoji zsess tab_id name state sid
+  local rows picked display zsess tab_id sid
   rows="$(python3 "$HOME/.claude/hooks/_cj.py" 2>/dev/null)"
   [[ -z "$rows" ]] && { print -u2 "cj: brak aktywnych Claude'ów"; return 1 }
 
   picked="$(printf '%s\n' "$rows" \
-    | fzf --ansi --with-nth=1,2,4,5 --delimiter=$'\t' \
-          --prompt='Claude > ' --height=40% --reverse \
-          --preview='echo {}' --preview-window=down:1)" || return 0
+    | fzf --ansi --with-nth=1 --delimiter=$'\t' \
+          --prompt='Claude > ' --height=60% --reverse \
+          --no-hscroll --tiebreak=index)" || return 0
 
-  IFS=$'\t' read -r emoji zsess tab_id name state sid <<< "$picked"
-  [[ -z "$tab_id" || -z "$zsess" ]] && return 1
+  IFS=$'\t' read -r display zsess tab_id sid <<< "$picked"
+  [[ -z "$tab_id" || -z "$zsess" ]] && return 0  # header / spacer
 
   if [[ "$zsess" == "$ZELLIJ_SESSION_NAME" ]]; then
     zellij action go-to-tab-by-id "$tab_id"
