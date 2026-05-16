@@ -31,10 +31,10 @@ cd ~/Workspace/dotfiles
 | `ghostty`   | Konfiguracja terminala Ghostty                          |
 | `zellij`    | Konfiguracja multipleksera Zellij                       |
 | `git`       | `.gitconfig` (delta, side-by-side) + Lazygit            |
-| `zshrc`     | Zsh + Oh My Zsh + Powerlevel10k + lazy-loaded NVM/pyenv |
+| `zshrc`     | Zsh + Oh My Zsh + Powerlevel10k + lazy-loaded NVM/pyenv; funkcje `cj` (fzf-picker sesji Claude'a) i `claude()` (auto-tab w Zellij) |
 | `nvim`      | Neovim z LazyVim                                        |
 | `aerospace` | Konfiguracja AeroSpace (tiling WM)                      |
-| `claude`    | Claude Code — custom statusline                         |
+| `claude`    | Claude Code — statusline + Zellij-aware hooki (`SessionStart/UserPromptSubmit/Stop/Notification/SessionEnd` → nazwa zakładki z ikoną stanu) |
 
 ## Struktura
 
