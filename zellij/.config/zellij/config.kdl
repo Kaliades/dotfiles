@@ -157,6 +157,8 @@ keybinds clear-defaults=true {
         // Alt+f puszczone do shella (forward-word). Floating na Alt+/
         unbind "Alt f"
         bind "Alt /" { ToggleFloatingPanes; }
+        // Szybki nowy tab — bez wchodzenia w Ctrl+T mode. Sibling Alt+/.
+        bind "Alt \\" { NewTab; }
         bind "Ctrl g" { SwitchToMode "locked"; }
         bind "Alt h" { MoveFocusOrTab "left"; }
         bind "Alt i" { MoveTab "left"; }
