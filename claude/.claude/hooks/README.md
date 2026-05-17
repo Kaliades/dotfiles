@@ -52,14 +52,13 @@ globalnie bez ryzyka, że zaszkodzą w gołym terminalu.
 ## Komplementarna integracja w zsh
 
 Hooki nazywają i kolorują **istniejący** tab/pane Claude'a. O tym **gdzie** Claude w ogóle
-ma wystartować decyduje funkcja `claude()` w `~/.zshrc` (z dotfiles: `zshrc/.zshrc`):
+ma wystartować decyduje user — w `~/.zshrc` (z dotfiles: `zshrc/.zshrc`) jest tylko alias:
 
-- Poza Zellijem albo `NOCLAUDETAB=1 claude` → passthrough do binarki w bieżącym pane
-- W Zellij + aktualny tab ma 1 pane → Claude startuje w tym pane
-- W Zellij + aktualny tab ma >1 pane → `zellij run --new-tab --close-on-exit -- claude "$@"`
+- `claude` → passthrough do binarki w bieżącym pane
+- `claudet` → `zellij action new-tab --close-on-exit -- claude` (claude w nowym tabie)
 
-Podział obowiązków: **zsh wybiera lokalizację, hook nazywa**. Brak coupling, brak race
-condition — funkcja działa zanim `SessionStart` w ogóle wystartuje.
+Podział obowiązków: **user wybiera lokalizację (`claude` vs `claudet`), hook nazywa**.
+Brak coupling, brak race condition — alias odpala się zanim `SessionStart` w ogóle wystartuje.
 
 ## Format cache
 

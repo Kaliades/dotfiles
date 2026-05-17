@@ -133,26 +133,7 @@ cj() {
 
 # claude — jak aktualny tab Zellija ma >1 pane, odpal Claude w nowym tabie.
 # Poza Zellijem albo gdy NOCLAUDETAB=1: passthrough do binarki bez magii.
-claude() {
-  if [[ -z "$ZELLIJ" ]] || [[ -n "$NOCLAUDETAB" ]]; then
-    command claude "$@"
-    return
-  fi
-
-  local panes
-  panes=$(zellij action dump-layout 2>/dev/null | awk '
-    /^[[:space:]]*tab[[:space:]{]/                       { in_tab = 0 }
-    /^[[:space:]]*tab[[:space:]{].*focus=true/           { in_tab = 1 }
-    in_tab && /^[[:space:]]*pane([[:space:]{]|$)/        { count++ }
-    END                                                  { print count + 0 }
-  ')
-
-  if (( panes > 1 )); then
-    zellij run --new-tab --close-on-exit -- claude "$@"
-  else
-    command claude "$@"
-  fi
-}
+alias claudet="zellij action new-tab --close-on-exit -- claude"
 
 # ============================================================================
 # Środowisko
