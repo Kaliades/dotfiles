@@ -44,15 +44,20 @@ write_session_field() {
   mkdir -p "$(_cache_dir)"
   {
     if [ -f "$file" ]; then
-      awk -F'\t' -v skip="$field" '
-        $1 != skip && $1 != "updated_at" && $1 != "pid" && $1 != "session_id" { print }
+      # Wycinamy stare wartosci pol ktore zaraz nadpiszemy. zellij_session
+      # wycinamy zawsze (gdy env niepusty) — pane moze zostac przeniesiony,
+      # albo sesja moze byc renameowana w przyszlosci.
+      awk -F'\t' -v skip="$field" -v refresh_zsess="${ZELLIJ_SESSION_NAME:+1}" '
+        $1 == skip { next }
+        $1 == "updated_at" || $1 == "pid" || $1 == "session_id" { next }
+        $1 == "zellij_session" && refresh_zsess == "1" { next }
+        { print }
       ' "$file"
     fi
     printf 'session_id\t%s\n' "$sid"
     printf '%s\t%s\n' "$field" "$value"
     [ -n "${ZELLIJ_SESSION_NAME:-}" ] \
       && [ "$field" != "zellij_session" ] \
-      && [ -z "$(awk -F'\t' '$1=="zellij_session"{print $2; exit}' "$file" 2>/dev/null)" ] \
       && printf 'zellij_session\t%s\n' "$ZELLIJ_SESSION_NAME"
     printf 'updated_at\t%s\n' "$ts"
     printf 'pid\t%s\n' "${PPID:-}"

@@ -109,12 +109,13 @@ ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 # Output _cj.py: <display>\t<zsess>\t<tab_id>\t<sid>\t<pane_id>.
 # Header rows maja puste sid (zsh bail-uje).
 #
-# Nawigacja:
-#   - same-session + pane_id != $ZELLIJ_PANE_ID -> focus-pane-id (jump do
-#     konkretnego pane'a Claude'a, dziala across tabby w tej sesji)
-#   - cross-session -> switch-session (uzytkownik sam dojedzie do taba;
-#     Zellij nie pozwala focus-pane-id wykonac w obcej sesji)
-#   - brak pane_id w cache -> degraded (stare wpisy sprzed update'a hooka)
+# Nawigacja: pane IDs sa unikalne w obrebie zellij-servera (jednej sesji),
+# wiec ZAWSZE probujemy focus-pane-id najpierw. To rozwiazuje problem
+# "stale zsess" — env $ZELLIJ_SESSION_NAME w pane jest snapshotem z momentu
+# startu pane'a, i Zellij nie aktualizuje go po rename-session. Stad wpisy
+# w cache moga miec rozne `zsess` mimo ze fizycznie sa w tej samej sesji.
+# focus-pane-id po prostu sprawdza czy pane istnieje u bieżącego servera.
+# switch-session zostawiamy jako fallback gdy focus-pane-id zawiedzie.
 cj() {
   [[ -z "$ZELLIJ" ]] && { print -u2 "cj: wymaga Zellija"; return 1 }
   command -v fzf >/dev/null || { print -u2 "cj: wymagany fzf"; return 1 }
@@ -131,15 +132,32 @@ cj() {
   IFS=$'\t' read -r display zsess tab_id sid pane_id <<< "$picked"
   [[ -z "$sid" ]] && return 0  # header / spacer
 
-  if [[ "$zsess" != "$ZELLIJ_SESSION_NAME" ]]; then
-    zellij action switch-session "$zsess"
-    return 0
+  # 1) Spróbuj focus-pane-id — najtansze i bezpieczne. Jesli pane jest
+  # w bieżącym serverze, przeskoczymy do niego (across tabby).
+  if [[ -n "$pane_id" && "$pane_id" != "${ZELLIJ_PANE_ID:-}" ]]; then
+    if zellij action focus-pane-id "$pane_id" 2>/dev/null; then
+      return 0
+    fi
   fi
 
-  # Same session — skok do pane'a Claude'a (across tabby w tej sesji).
-  if [[ -n "$pane_id" && "$pane_id" != "$ZELLIJ_PANE_ID" ]]; then
-    zellij action focus-pane-id "$pane_id"
+  # 2) Pane nie znaleziony lub brak pane_id w cache. Switch-session TYLKO
+  # gdy target istnieje w list-sessions — inaczej Zellij tworzy nowa pusta
+  # sesje i wyrzuca uzytkownika (klasyczna pulapka).
+  if [[ -n "$zsess" && "$zsess" != "${ZELLIJ_SESSION_NAME:-}" ]]; then
+    local sessions
+    sessions="$(zellij list-sessions 2>&1 \
+                | sed -E 's/'$'\033''\[[0-9;]*[a-zA-Z]//g' \
+                | awk -F' \\[' '{print $1}')"
+    if printf '%s\n' "$sessions" | grep -Fxq "$zsess"; then
+      zellij action switch-session "$zsess"
+      return 0
+    fi
+    print -u2 "cj: sesja '$zsess' nie istnieje (cache stale?). pane_id=$pane_id"
+    return 1
   fi
+
+  # 3) Same session ale pane_id pusty — nie mamy gdzie skoczyć.
+  [[ -z "$pane_id" ]] && print -u2 "cj: brak pane_id w cache dla $sid (wyślij prompt zeby hook odswieżył)"
 }
 
 # claudet — odpal Claude'a w nowym tabie Zellija.
