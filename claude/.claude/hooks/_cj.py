@@ -3,13 +3,14 @@
 Helper dla zsh funkcji `cj`. Listuje aktywne sesje Claude'a w formacie pod fzf.
 
 Output: jedna linia per rzad, pola rozdzielone TAB-em:
-    <display>\\t<zellij_session>\\t<tab_id>\\t<sid>
+    <display>\\t<zellij_session>\\t<tab_id>\\t<sid>\\t<pane_id>
 
 Pierwsza kolumna (display) zawiera kolorowany, wyrownany tekst gotowy do
 pokazania w fzf. Pozostale kolumny sa ukryte (--with-nth=1) i sluza zsh
-do nawigacji (rename / switch tab).
-
-Header rows grupy maja puste tab_id — zsh function bail-uje gdy puste.
+do nawigacji:
+  - <sid> pusty -> header/spacer (zsh bail-uje)
+  - <pane_id> -> zellij action focus-pane-id (jump do konkretnego pane'a)
+  - <tab_id> -> legacy, zostaje dla kompatybilnosci ze starymi cache'ami
 
 Filtry:
   - state != "idle"
@@ -18,15 +19,20 @@ Filtry:
 
 Sortowanie:
   - Grupowanie po Zellij session (alfabetycznie; current zellij na gorze)
-  - W grupie: waiting, working, done; potem alfabetycznie po name.
+  - W grupie: waiting, working, done; potem alfabetycznie po cwd.
 """
 
 import os
+import re
 import subprocess
 import sys
 import time
 import unicodedata
 from pathlib import Path
+
+# Defensive strip — stare pliki cache (sprzed wywalenia zellij action z hookow)
+# moga miec emoji prefix w zellij_session. Bez tego grupowanie pada.
+_EMOJI_PREFIX = re.compile(r'^([🔔✅]\s+)+')
 
 CACHE = Path.home() / ".claude" / "cache"
 NOW = int(time.time())
@@ -160,15 +166,15 @@ def main() -> int:
 
         state = d.get("state", "")
         tab_id = d.get("tab_id", "")
-        zsess = d.get("zellij_session", "")
+        pane_id = d.get("pane_id", "")
+        zsess = _EMOJI_PREFIX.sub("", d.get("zellij_session", ""))
         sid = d.get("session_id", "")
-        name = d.get("name", "") or "Claude"
         cwd = d.get("cwd", "")
         branch = d.get("branch", "")
 
         if state not in EMOJI:
             continue
-        if not tab_id or not zsess:
+        if not zsess or not sid:
             continue
 
         # Lazy fallback dla sesji sprzed update'a hooka.
@@ -180,9 +186,9 @@ def main() -> int:
         rows.append({
             "state": state,
             "tab_id": tab_id,
+            "pane_id": pane_id,
             "zsess": zsess,
             "sid": sid,
-            "name": name,
             "cwd": shorten_path(cwd) if cwd else "",
             "branch": branch,
         })
@@ -198,37 +204,34 @@ def main() -> int:
     group_keys = sorted(by_group.keys(), key=lambda k: (k != current_zsess, k.lower()))
 
     # Wyznacz wspolne szerokosci kolumn (across all rows, dla wyrownania w calej liscie).
-    name_w = max((display_width(r["name"]) for r in rows), default=0)
     cwd_w = max((display_width(r["cwd"]) for r in rows), default=0)
     branch_w = max((display_width(r["branch"]) for r in rows), default=0)
 
     # Mini caps zeby header nie ucieklo poza fzf.
-    name_w = min(name_w, 36)
-    cwd_w = min(cwd_w, 28)
+    cwd_w = min(cwd_w, 36)
     branch_w = min(branch_w, 22)
 
     out = []
     for gi, gk in enumerate(group_keys):
         marker = " ← obecna" if gk == current_zsess else ""
         header = f"{DIM}{CYAN}── 📺 {BOLD}{gk}{RESET}{DIM}{CYAN}{marker} ──{RESET}"
-        # Header row: pusty tab_id, pusty zsess, pusty sid → zsh bail.
-        out.append(f"{header}\t\t\t")
+        # Header row: puste sid -> zsh bail.
+        out.append(f"{header}\t\t\t\t")
 
         group_rows = sorted(
             by_group[gk],
-            key=lambda r: (ORDER[r["state"]], r["name"].lower()),
+            key=lambda r: (ORDER[r["state"]], r["cwd"].lower()),
         )
         for r in group_rows:
             emoji = EMOJI[r["state"]]
             state_col = f"{STATE_COLOR[r['state']]}{emoji}{RESET}"
-            name_col = pad(r["name"], name_w)
             cwd_col = f"{GREY}{pad('📁 ' + r['cwd'] if r['cwd'] else '', cwd_w + 3)}{RESET}"
             branch_col = f"{MAGENTA}{pad('  ' + r['branch'] if r['branch'] else '', branch_w + 2)}{RESET}"
-            display = f"  {state_col}  {name_col}  {cwd_col}  {branch_col}"
-            out.append(f"{display}\t{r['zsess']}\t{r['tab_id']}\t{r['sid']}")
+            display = f"  {state_col}  {cwd_col}  {branch_col}"
+            out.append(f"{display}\t{r['zsess']}\t{r['tab_id']}\t{r['sid']}\t{r['pane_id']}")
 
         if gi < len(group_keys) - 1:
-            out.append(f"{DIM}{GREY}\t\t\t{RESET}")  # blank spacer (also non-selectable)
+            out.append(f"{DIM}{GREY}\t\t\t\t{RESET}")  # blank spacer (also non-selectable)
 
     sys.stdout.write("\n".join(out) + "\n")
     return 0

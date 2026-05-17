@@ -105,13 +105,21 @@ serve() { python3 -m http.server "${1:-8000}"; }
 # Znajdź plik po nazwie
 ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 
-# cj — picker sesji Claude'a w Zellij (fzf + go-to-tab-by-id / switch-session)
-# Output _cj.py: <display>\t<zsess>\t<tab_id>\t<sid>. Header rows maja puste tab_id.
+# cj — picker sesji Claude'a w Zellij (fzf + focus-pane-id / switch-session)
+# Output _cj.py: <display>\t<zsess>\t<tab_id>\t<sid>\t<pane_id>.
+# Header rows maja puste sid (zsh bail-uje).
+#
+# Nawigacja:
+#   - same-session + pane_id != $ZELLIJ_PANE_ID -> focus-pane-id (jump do
+#     konkretnego pane'a Claude'a, dziala across tabby w tej sesji)
+#   - cross-session -> switch-session (uzytkownik sam dojedzie do taba;
+#     Zellij nie pozwala focus-pane-id wykonac w obcej sesji)
+#   - brak pane_id w cache -> degraded (stare wpisy sprzed update'a hooka)
 cj() {
   [[ -z "$ZELLIJ" ]] && { print -u2 "cj: wymaga Zellija"; return 1 }
   command -v fzf >/dev/null || { print -u2 "cj: wymagany fzf"; return 1 }
 
-  local rows picked display zsess tab_id sid
+  local rows picked display zsess tab_id sid pane_id
   rows="$(python3 "$HOME/.claude/hooks/_cj.py" 2>/dev/null)"
   [[ -z "$rows" ]] && { print -u2 "cj: brak aktywnych Claude'ów"; return 1 }
 
@@ -120,20 +128,33 @@ cj() {
           --prompt='Claude > ' --height=60% --reverse \
           --no-hscroll --tiebreak=index)" || return 0
 
-  IFS=$'\t' read -r display zsess tab_id sid <<< "$picked"
-  [[ -z "$tab_id" || -z "$zsess" ]] && return 0  # header / spacer
+  IFS=$'\t' read -r display zsess tab_id sid pane_id <<< "$picked"
+  [[ -z "$sid" ]] && return 0  # header / spacer
 
-  if [[ "$zsess" == "$ZELLIJ_SESSION_NAME" ]]; then
-    zellij action go-to-tab-by-id "$tab_id"
-  else
-    zellij -s "$zsess" action go-to-tab-by-id "$tab_id" 2>/dev/null
+  if [[ "$zsess" != "$ZELLIJ_SESSION_NAME" ]]; then
     zellij action switch-session "$zsess"
+    return 0
+  fi
+
+  # Same session — skok do pane'a Claude'a (across tabby w tej sesji).
+  if [[ -n "$pane_id" && "$pane_id" != "$ZELLIJ_PANE_ID" ]]; then
+    zellij action focus-pane-id "$pane_id"
   fi
 }
 
-# claude — jak aktualny tab Zellija ma >1 pane, odpal Claude w nowym tabie.
-# Poza Zellijem albo gdy NOCLAUDETAB=1: passthrough do binarki bez magii.
-alias claudet="zellij action new-tab --close-on-exit -- claude"
+# claudet — odpal Claude'a w nowym tabie Zellija.
+# UWAGA: nie moze byc aliasem ani uzywac samego "claude" jako commandu, bo
+# `zellij action new-tab -- <cmd>` spawnuje proces uzywajac PATH-u zellij-servera
+# (zamrozonego w momencie startu sesji), a nie PATH-u Twojego shella. Server
+# czesto nie ma ~/.local/bin -> claude command not found -> tab otwiera sie pusty.
+# Rozwiazanie: rezolwuj binarke tu (w shellu wywolujacym, gdzie .zshrc juz
+# poprawil PATH) i podaj absolutna sciezke.
+claudet() {
+  local bin
+  bin="$(command -v claude 2>/dev/null)"
+  [[ -z "$bin" ]] && { print -u2 "claudet: claude nie znaleziony w PATH"; return 127 }
+  zellij action new-tab --close-on-exit --cwd "$PWD" -- "$bin"
+}
 
 # ============================================================================
 # Środowisko

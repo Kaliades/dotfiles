@@ -16,10 +16,14 @@ Pusty stdout = nic do dorzucenia.
 """
 
 import os
+import re
 import sys
 import time
 from collections import defaultdict
 from pathlib import Path
+
+# Defensive strip dla starych plikow cache z emoji prefixem w zellij_session.
+_EMOJI_PREFIX = re.compile(r'^([🔔✅]\s+)+')
 
 CACHE = Path.home() / ".claude" / "cache"
 MY_SID = os.environ.get("CLAUDE_OTHERS_MY_SID", "")
@@ -75,7 +79,7 @@ def main() -> int:
         state = d.get("state", "")
         pid = d.get("pid", "")
         ts_raw = d.get("updated_at", "0")
-        zsess = d.get("zellij_session", "") or "?"
+        zsess = _EMOJI_PREFIX.sub("", d.get("zellij_session", "")) or "?"
 
         try:
             age = NOW - int(ts_raw)
