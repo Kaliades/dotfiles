@@ -167,7 +167,10 @@ def main() -> int:
         state = d.get("state", "")
         tab_id = d.get("tab_id", "")
         pane_id = d.get("pane_id", "")
-        zsess = _EMOJI_PREFIX.sub("", d.get("zellij_session", ""))
+        # zsess RAW — to faktyczna nazwa sesji Zellija (z emoji jesli sesja
+        # zostala kiedys renameowana). switch-session wymaga dokladnie tej
+        # nazwy. Strip robimy tylko w display column nizej.
+        zsess = d.get("zellij_session", "")
         sid = d.get("session_id", "")
         cwd = d.get("cwd", "")
         branch = d.get("branch", "")
@@ -214,7 +217,8 @@ def main() -> int:
     out = []
     for gi, gk in enumerate(group_keys):
         marker = " ← obecna" if gk == current_zsess else ""
-        header = f"{DIM}{CYAN}── 📺 {BOLD}{gk}{RESET}{DIM}{CYAN}{marker} ──{RESET}"
+        display_gk = _EMOJI_PREFIX.sub("", gk)  # cosmetic strip tylko w header
+        header = f"{DIM}{CYAN}── 📺 {BOLD}{display_gk}{RESET}{DIM}{CYAN}{marker} ──{RESET}"
         # Header row: puste sid -> zsh bail.
         out.append(f"{header}\t\t\t\t")
 

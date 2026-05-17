@@ -16,13 +16,11 @@ _session_file() {
   printf '%s/session-%s' "$(_cache_dir)" "${1:-unknown}"
 }
 
-# Strip nasze emoji prefixy z $ZELLIJ_SESSION_NAME — jak shell wystartowal
-# PO rename-session (kiedys), env var dziedziczy "✅ main" zamiast "main".
-# Robimy strip raz, defensive, bo cache go zapisuje.
-if [ -n "${ZELLIJ_SESSION_NAME:-}" ]; then
-  ZELLIJ_SESSION_NAME="$(printf '%s' "$ZELLIJ_SESSION_NAME" | sed -E 's/^([🔔✅][[:space:]]+)+//')"
-  export ZELLIJ_SESSION_NAME
-fi
+# Cache zapisuje $ZELLIJ_SESSION_NAME RAW — to nazwa pod ktora Zellij
+# faktycznie trzyma sesje, i 'zellij action switch-session' wymaga
+# dokladnie tej nazwy. Jesli env zawiera "🔔 main" bo poprzednie hooki
+# renamowaly sesje, to TEZ jest aktualna nazwa sesji i trzeba ja
+# zachowac. Strip do "main" robimy tylko cosmetic w _cj.py/display.
 
 # read_session_field <sid> <field> -> stdout
 read_session_field() {
