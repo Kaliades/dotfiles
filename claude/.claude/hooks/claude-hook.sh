@@ -19,14 +19,14 @@ SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)"
 CWD="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)"
 [ -z "$CWD" ] && CWD="${PWD:-}"
 
-# Synchronicznie pisze cwd + branch + pane_id. Bez bg subshelli — git
-# symbolic-ref to <50ms, lepiej splacic ten koszt niz wisiec na disown'd
-# subshellach. pane_id pochodzi z $ZELLIJ_PANE_ID (env ustawiona przez
-# Zellija przy starcie pane'a) — uzywany przez cj() do focus-pane-id.
-capture_cwd_and_branch() {
+# Synchronicznie pisze pane_id + branch (jesli pane jest w git repo).
+# Bez bg subshelli — git symbolic-ref to <50ms, lepiej splacic ten koszt
+# niz wisiec na disown'd subshellach. pane_id z $ZELLIJ_PANE_ID (stable)
+# to join-key do `zellij action list-panes -j` w _cj.py.
+# cwd JUZ NIE zapisujemy — zellij sam wie przez list-panes.pane_cwd.
+capture_pane_and_branch() {
   local sid="$1"
   [ -z "$sid" ] && return 0
-  [ -n "$CWD" ] && write_session_field "$sid" "cwd" "$CWD"
   [ -n "${ZELLIJ_PANE_ID:-}" ] && write_session_field "$sid" "pane_id" "$ZELLIJ_PANE_ID"
   if [ -n "$CWD" ] && [ -d "$CWD" ]; then
     local br
@@ -39,12 +39,12 @@ capture_cwd_and_branch() {
 case "$EVENT" in
   session-start)
     write_state "$SESSION_ID" "idle"
-    capture_cwd_and_branch "$SESSION_ID"
+    capture_pane_and_branch "$SESSION_ID"
     ;;
 
   prompt-submit)
     write_state "$SESSION_ID" "working"
-    capture_cwd_and_branch "$SESSION_ID"
+    capture_pane_and_branch "$SESSION_ID"
     ;;
 
   stop)

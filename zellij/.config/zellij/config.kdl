@@ -177,6 +177,15 @@ keybinds clear-defaults=true {
             }
             SwitchToMode "normal"
         }
+        // Alt+c — floating picker sesji Claude'a (cj). zsh -ic zeby zaladowac
+        // funkcje cj z .zshrc. close_on_exit zamyka float po wyborze.
+        bind "Alt c" {
+            Run "/bin/zsh" "-ic" "cj" {
+                floating true
+                close_on_exit true
+                name "cj"
+            }
+        }
         bind "Alt w" { CloseFocus; }
     }
     shared_except "locked" "move" {

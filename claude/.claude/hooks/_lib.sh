@@ -3,10 +3,17 @@
 #
 # Hooki utrzymuja TYLKO cache (~/.claude/cache/session-<sid>) — zero
 # wywolan zellij. Renamowanie zakladek/sesji zostalo usuniete bo
-# rownolegle 'zellij action' zatykaja socket i tworza wiszace subshelle.
+# rownolegle mutujace 'zellij action' (rename-tab) zatykaja socket
+# i tworza wiszace subshelle.
 #
-# Cache TSV: <field>\t<value>, jedno pole na linie.
-# Pola: session_id, state, zellij_session, cwd, branch, updated_at, pid
+# Live metadata (nazwa sesji, tab_name, cwd) bierzemy z `zellij action
+# list-panes -a -j` w _cj.py — to live, omija problem stale $ZELLIJ_SESSION_NAME.
+# W cache trzymamy tylko CLAUDE-side state ktorego Zellij nie wie:
+#   - session_id (Claude'a)
+#   - state (idle/working/done/waiting)
+#   - branch (git, bo Zellij gita nie zna)
+#   - pane_id ($ZELLIJ_PANE_ID, stabilne — join-key do list-panes)
+#   - updated_at, pid
 
 _cache_dir() {
   echo "$HOME/.claude/cache"
@@ -15,12 +22,6 @@ _cache_dir() {
 _session_file() {
   printf '%s/session-%s' "$(_cache_dir)" "${1:-unknown}"
 }
-
-# Cache zapisuje $ZELLIJ_SESSION_NAME RAW — to nazwa pod ktora Zellij
-# faktycznie trzyma sesje, i 'zellij action switch-session' wymaga
-# dokladnie tej nazwy. Jesli env zawiera "🔔 main" bo poprzednie hooki
-# renamowaly sesje, to TEZ jest aktualna nazwa sesji i trzeba ja
-# zachowac. Strip do "main" robimy tylko cosmetic w _cj.py/display.
 
 # read_session_field <sid> <field> -> stdout
 read_session_field() {
@@ -32,7 +33,8 @@ read_session_field() {
 
 # write_session_field <sid> <field> <value>
 # Atomowo: load -> set field -> save. Preserves wszystkie inne pola,
-# ZAWSZE odswieza meta (updated_at, pid).
+# ZAWSZE odswieza meta (updated_at, pid). Wycina stale pola (zellij_session,
+# cwd) gdyby ktos uruchomil cj z plikiem cache sprzed migracji.
 write_session_field() {
   local sid="$1"
   local field="$2"
@@ -44,21 +46,16 @@ write_session_field() {
   mkdir -p "$(_cache_dir)"
   {
     if [ -f "$file" ]; then
-      # Wycinamy stare wartosci pol ktore zaraz nadpiszemy. zellij_session
-      # wycinamy zawsze (gdy env niepusty) — pane moze zostac przeniesiony,
-      # albo sesja moze byc renameowana w przyszlosci.
-      awk -F'\t' -v skip="$field" -v refresh_zsess="${ZELLIJ_SESSION_NAME:+1}" '
+      awk -F'\t' -v skip="$field" '
         $1 == skip { next }
         $1 == "updated_at" || $1 == "pid" || $1 == "session_id" { next }
-        $1 == "zellij_session" && refresh_zsess == "1" { next }
+        # Legacy fields — wycinaj zawsze, juz nie pisane.
+        $1 == "zellij_session" || $1 == "cwd" { next }
         { print }
       ' "$file"
     fi
     printf 'session_id\t%s\n' "$sid"
     printf '%s\t%s\n' "$field" "$value"
-    [ -n "${ZELLIJ_SESSION_NAME:-}" ] \
-      && [ "$field" != "zellij_session" ] \
-      && printf 'zellij_session\t%s\n' "$ZELLIJ_SESSION_NAME"
     printf 'updated_at\t%s\n' "$ts"
     printf 'pid\t%s\n' "${PPID:-}"
   } > "$tmp" 2>/dev/null && mv -f "$tmp" "$file"

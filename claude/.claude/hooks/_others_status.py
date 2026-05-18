@@ -1,34 +1,32 @@
 #!/usr/bin/env python3
 """
-Renderuje sekcje statusline z innymi aktywnymi sesjami Claude'a, pogrupowanymi per
-sesja Zellija. Czyta pliki ~/.claude/cache/session-* (TSV key<TAB>value).
+Renderuje sekcje statusline z innymi aktywnymi sesjami Claude'a, pogrupowanymi
+per LIVE Zellij session. Cache (~/.claude/cache/session-*) trzyma tylko
+claude-side state, live metadata (nazwa sesji) bierzemy z `list-panes`.
 
 Filtry:
-  - pominiecie wlasnej sesji (env CLAUDE_OTHERS_MY_SID)
+  - pominiecie wlasnej sesji Claude'a (env CLAUDE_OTHERS_MY_SID)
   - pominiecie stanu "idle"
-  - lazy GC: kasuje pliki gdzie PID nie zyje albo wpis starszy niz TTL (24h)
+  - lazy GC: kasuje pliki gdzie pid nie zyje albo wpis starszy niz TTL (24h)
 
-Wyjscie: jedna linia per sesja Zellija, format:
+Wyjscie: jedna linia per Zellij-sesja, format:
     <BOLD>sesja:</BOLD> ⚙️N · 🔔N · ✅N
-
-Sortowanie sesji: z "waiting" na pierwszym miejscu, potem alfabetycznie.
-Pusty stdout = nic do dorzucenia.
 """
 
 import os
-import re
 import sys
 import time
 from collections import defaultdict
 from pathlib import Path
 
-# Defensive strip dla starych plikow cache z emoji prefixem w zellij_session.
-_EMOJI_PREFIX = re.compile(r'^([🔔✅]\s+)+')
+sys.path.insert(0, str(Path(__file__).parent))
+from _zellij import live_panes_by_session  # noqa: E402
+
 
 CACHE = Path.home() / ".claude" / "cache"
 MY_SID = os.environ.get("CLAUDE_OTHERS_MY_SID", "")
 NOW = int(time.time())
-TTL = 86400  # 24h
+TTL = 86400
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -67,62 +65,74 @@ def main() -> int:
     if not CACHE.is_dir():
         return 0
 
-    by_session: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    sessions_with_waiting: set[str] = set()
-
+    # Cache -> {pane_id: (state, sid)}, filtrowane przez TTL/pid/idle/my-sid.
+    by_pane: dict[int, tuple[str, str]] = {}
     for f in sorted(CACHE.glob("session-*")):
         d = parse(f)
         if not d:
             continue
-
-        sid = d.get("session_id", "")
-        state = d.get("state", "")
         pid = d.get("pid", "")
-        ts_raw = d.get("updated_at", "0")
-        # zsess RAW do grupowania (zeby sesje o tej samej faktycznej nazwie
-        # ladowaly razem); strip emoji tylko cosmetic w printowaniu nazwy.
-        zsess = d.get("zellij_session", "") or "?"
-
         try:
-            age = NOW - int(ts_raw)
+            age = NOW - int(d.get("updated_at", "0"))
         except ValueError:
             age = 0
-
-        # Lazy GC
         if age > TTL or (pid and not pid_alive(pid)):
             try:
                 f.unlink()
             except OSError:
                 pass
             continue
-
-        if sid and sid == MY_SID:
+        sid = d.get("session_id", "")
+        state = d.get("state", "")
+        pane_id_raw = d.get("pane_id", "")
+        if state not in EMOJI:  # idle + smieci
             continue
-        if state not in EMOJI:  # filtruje idle i smieci
+        if sid == MY_SID:
             continue
+        try:
+            pid_int = int(pane_id_raw)
+        except ValueError:
+            continue
+        by_pane[pid_int] = (state, sid)
 
-        by_session[zsess][state] += 1
-        if state == "waiting":
-            sessions_with_waiting.add(zsess)
+    if not by_pane:
+        return 0
 
+    # Join z live Zellij sessions po pane_id.
+    by_session = live_panes_by_session()
     if not by_session:
         return 0
 
+    counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    sessions_with_waiting: set[str] = set()
+
+    for sess, panes in by_session.items():
+        for p in panes:
+            pid = p.get("id")
+            if pid is None or pid not in by_pane:
+                continue
+            state, _ = by_pane[pid]
+            counts[sess][state] += 1
+            if state == "waiting":
+                sessions_with_waiting.add(sess)
+
+    if not counts:
+        return 0
+
     sorted_sessions = sorted(
-        by_session.keys(),
+        counts.keys(),
         key=lambda s: (s not in sessions_with_waiting, s.lower()),
     )
 
     sep = f"{GRAY} · {RESET}"
-    for zsess in sorted_sessions:
+    for sess in sorted_sessions:
         parts = []
         for state in ORDER:
-            cnt = by_session[zsess].get(state, 0)
+            cnt = counts[sess].get(state, 0)
             if cnt > 0:
                 parts.append(f"{COLOR[state]}{EMOJI[state]}{cnt}{RESET}")
         if parts:
-            display = _EMOJI_PREFIX.sub("", zsess)  # cosmetic strip
-            print(f"{BOLD}{display}:{RESET} " + sep.join(parts))
+            print(f"{BOLD}{sess}:{RESET} " + sep.join(parts))
 
     return 0
 

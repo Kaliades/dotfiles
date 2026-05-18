@@ -105,22 +105,19 @@ serve() { python3 -m http.server "${1:-8000}"; }
 # Znajdź plik po nazwie
 ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 
-# cj — picker sesji Claude'a w Zellij (fzf + focus-pane-id / switch-session)
-# Output _cj.py: <display>\t<zsess>\t<tab_id>\t<sid>\t<pane_id>.
-# Header rows maja puste sid (zsh bail-uje).
+# cj — picker sesji Claude'a w Zellij.
+# Output _cj.py: <display>\t<target_session>\t<my_session>\t<pane_id>\t<sid>
+# Header/spacer rows maja puste sid -> bail.
 #
-# Nawigacja: pane IDs sa unikalne w obrebie zellij-servera (jednej sesji),
-# wiec ZAWSZE probujemy focus-pane-id najpierw. To rozwiazuje problem
-# "stale zsess" — env $ZELLIJ_SESSION_NAME w pane jest snapshotem z momentu
-# startu pane'a, i Zellij nie aktualizuje go po rename-session. Stad wpisy
-# w cache moga miec rozne `zsess` mimo ze fizycznie sa w tej samej sesji.
-# focus-pane-id po prostu sprawdza czy pane istnieje u bieżącego servera.
-# switch-session zostawiamy jako fallback gdy focus-pane-id zawiedzie.
+# Live metadata (nazwa sesji, tab, cwd) bierzemy z `zellij action list-panes -j`
+# w _cj.py, nie z env $ZELLIJ_SESSION_NAME (stale po rename). Stad target_session
+# i my_session sa zawsze aktualne. Zellij CLI z stale env failuje cicho —
+# uzywamy `--session <live_name>` zeby ominac stale socket path.
 cj() {
   [[ -z "$ZELLIJ" ]] && { print -u2 "cj: wymaga Zellija"; return 1 }
   command -v fzf >/dev/null || { print -u2 "cj: wymagany fzf"; return 1 }
 
-  local rows picked display zsess tab_id sid pane_id
+  local rows picked display target my_sess pane_id sid
   rows="$(python3 "$HOME/.claude/hooks/_cj.py" 2>/dev/null)"
   [[ -z "$rows" ]] && { print -u2 "cj: brak aktywnych Claude'ów"; return 1 }
 
@@ -129,35 +126,30 @@ cj() {
           --prompt='Claude > ' --height=60% --reverse \
           --no-hscroll --tiebreak=index)" || return 0
 
-  IFS=$'\t' read -r display zsess tab_id sid pane_id <<< "$picked"
+  IFS=$'\t' read -r display target my_sess pane_id sid <<< "$picked"
   [[ -z "$sid" ]] && return 0  # header / spacer
 
-  # 1) Spróbuj focus-pane-id — najtansze i bezpieczne. Jesli pane jest
-  # w bieżącym serverze, przeskoczymy do niego (across tabby).
-  if [[ -n "$pane_id" && "$pane_id" != "${ZELLIJ_PANE_ID:-}" ]]; then
-    if zellij action focus-pane-id "$pane_id" 2>/dev/null; then
-      return 0
-    fi
+  # Same session: focus-pane-id w mojej live-sesji. --session explicit
+  # zeby ominac stale env (po rename-session bez tego CLI hangs/fails).
+  if [[ -n "$my_sess" && "$target" == "$my_sess" ]]; then
+    zellij --session "$my_sess" action focus-pane-id "$pane_id" 2>/dev/null
+    return $?
   fi
 
-  # 2) Pane nie znaleziony lub brak pane_id w cache. Switch-session TYLKO
-  # gdy target istnieje w list-sessions — inaczej Zellij tworzy nowa pusta
-  # sesje i wyrzuca uzytkownika (klasyczna pulapka).
-  if [[ -n "$zsess" && "$zsess" != "${ZELLIJ_SESSION_NAME:-}" ]]; then
-    local sessions
-    sessions="$(zellij list-sessions 2>&1 \
-                | sed -E 's/'$'\033''\[[0-9;]*[a-zA-Z]//g' \
-                | awk -F' \\[' '{print $1}')"
-    if printf '%s\n' "$sessions" | grep -Fxq "$zsess"; then
-      zellij action switch-session "$zsess"
-      return 0
+  # Cross-session: switch do target. switch-session wykonuje sie w MOJEJ
+  # sesji (mial mnie do targetu przeniesc), wiec --session=my_sess.
+  if [[ -n "$target" ]]; then
+    if [[ -n "$my_sess" ]]; then
+      zellij --session "$my_sess" action switch-session "$target"
+    else
+      # Brak my_sess — fallback do env (moze byc stale, ale czesto OK).
+      zellij action switch-session "$target"
     fi
-    print -u2 "cj: sesja '$zsess' nie istnieje (cache stale?). pane_id=$pane_id"
-    return 1
+    return $?
   fi
 
-  # 3) Same session ale pane_id pusty — nie mamy gdzie skoczyć.
-  [[ -z "$pane_id" ]] && print -u2 "cj: brak pane_id w cache dla $sid (wyślij prompt zeby hook odswieżył)"
+  print -u2 "cj: brak target_session w wyborze (bug?)"
+  return 1
 }
 
 # claudet — odpal Claude'a w nowym tabie Zellija.
@@ -165,17 +157,21 @@ cj() {
 # `zellij action new-tab -- <cmd>` spawnuje proces uzywajac PATH-u zellij-servera
 # (zamrozonego w momencie startu sesji), a nie PATH-u Twojego shella. Server
 # czesto nie ma ~/.local/bin -> claude command not found -> tab otwiera sie pusty.
-# Rozwiazanie: rezolwuj binarke tu (w shellu wywolujacym, gdzie .zshrc juz
-# poprawil PATH) i podaj absolutna sciezke.
+# Dwa fixy:
+#   1) Rezolwuj binarke tu (w shellu wywolujacym, gdzie .zshrc juz poprawil PATH)
+#      i podaj absolutna sciezke -> binarka sie odpala.
+#   2) Przekaz PATH przez `env`, bo claude sprawdza wewnetrznie czy ~/.local/bin
+#      jest w PATH i bez tego wypluwa ostrzezenie "Native installation exists
+#      but ~/.local/bin is not in your PATH".
 claudet() {
   local bin name
   bin="$(command -v claude 2>/dev/null)"
   [[ -z "$bin" ]] && { print -u2 "claudet: claude nie znaleziony w PATH"; return 127 }
   name="$*"
   if [[ -z "$name" ]]; then
-    zellij action new-tab --close-on-exit --cwd "$PWD" -- "$bin"
+    zellij action new-tab --close-on-exit --cwd "$PWD" -- /usr/bin/env "PATH=$PATH" "$bin"
   else
-    zellij action new-tab --close-on-exit --cwd "$PWD" --name "$name" -- "$bin"
+    zellij action new-tab --close-on-exit --cwd "$PWD" --name "$name" -- /usr/bin/env "PATH=$PATH" "$bin"
   fi
 }
 

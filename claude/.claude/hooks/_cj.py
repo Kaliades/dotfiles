@@ -3,36 +3,34 @@
 Helper dla zsh funkcji `cj`. Listuje aktywne sesje Claude'a w formacie pod fzf.
 
 Output: jedna linia per rzad, pola rozdzielone TAB-em:
-    <display>\\t<zellij_session>\\t<tab_id>\\t<sid>\\t<pane_id>
+    <display>\\t<target_session>\\t<my_session>\\t<pane_id>\\t<sid>
 
 Pierwsza kolumna (display) zawiera kolorowany, wyrownany tekst gotowy do
 pokazania w fzf. Pozostale kolumny sa ukryte (--with-nth=1) i sluza zsh
 do nawigacji:
   - <sid> pusty -> header/spacer (zsh bail-uje)
-  - <pane_id> -> zellij action focus-pane-id (jump do konkretnego pane'a)
-  - <tab_id> -> legacy, zostaje dla kompatybilnosci ze starymi cache'ami
+  - <pane_id> + <target_session> -> `zellij --session <target> action focus-pane-id <id>`
+  - <my_session> -> nazwa MOJEJ live-sesji (do --session flag, omija stale env)
 
-Filtry:
-  - state != "idle"
-  - tab_id + zellij_session musza istniec
-  - pid musi zyc, plik nie starszy niz TTL (24h) — lazy GC
-
-Sortowanie:
-  - Grupowanie po Zellij session (alfabetycznie; current zellij na gorze)
-  - W grupie: waiting, working, done; potem alfabetycznie po cwd.
+Architektura:
+  - Cache (~/.claude/cache/session-<sid>): TYLKO claude-side state
+    (state, branch, pane_id, session_id, meta).
+  - Live z `zellij action list-panes -a -j`: tab_name, pane_cwd, title,
+    session_name, is_focused. Join na pane_id.
+  - Stale $ZELLIJ_SESSION_NAME nigdy nie czytamy do display'u — szukamy
+    mojej sesji po $ZELLIJ_PANE_ID wsrod live pane'ow.
 """
 
 import os
-import re
-import subprocess
 import sys
 import time
 import unicodedata
 from pathlib import Path
 
-# Defensive strip — stare pliki cache (sprzed wywalenia zellij action z hookow)
-# moga miec emoji prefix w zellij_session. Bez tego grupowanie pada.
-_EMOJI_PREFIX = re.compile(r'^([🔔✅]\s+)+')
+# Lokalny import — _zellij.py obok.
+sys.path.insert(0, str(Path(__file__).parent))
+from _zellij import live_panes_by_session, find_my_session  # noqa: E402
+
 
 CACHE = Path.home() / ".claude" / "cache"
 NOW = int(time.time())
@@ -60,43 +58,6 @@ def pid_alive(pid: str) -> bool:
         return True
     except (OSError, ValueError):
         return False
-
-
-def lsof_cwd(pid: str) -> str:
-    """Lazy fallback: cwd procesu przez lsof (macOS-compatible)."""
-    if not pid:
-        return ""
-    try:
-        out = subprocess.run(
-            ["lsof", "-a", "-d", "cwd", "-p", pid],
-            capture_output=True, text=True, timeout=1,
-        ).stdout
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    lines = [l for l in out.splitlines() if l and not l.startswith("COMMAND")]
-    if not lines:
-        return ""
-    parts = lines[-1].split(None, 8)
-    return parts[8].strip() if len(parts) >= 9 else ""
-
-
-def git_branch(cwd: str) -> str:
-    if not cwd or not os.path.isdir(cwd):
-        return ""
-    try:
-        r = subprocess.run(
-            ["git", "-C", cwd, "symbolic-ref", "--short", "-q", "HEAD"],
-            capture_output=True, text=True, timeout=1,
-        )
-        if r.returncode == 0 and r.stdout.strip():
-            return r.stdout.strip()
-        r = subprocess.run(
-            ["git", "-C", cwd, "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=1,
-        )
-        return r.stdout.strip() if r.returncode == 0 else ""
-    except (OSError, subprocess.SubprocessError):
-        return ""
 
 
 def parse(path: Path) -> dict:
@@ -138,104 +99,141 @@ def shorten_path(cwd: str) -> str:
     return Path(cwd).name or cwd[-30:]
 
 
-def main() -> int:
+def shorten_title(title: str) -> str:
+    """Wyciagnij stan z title typu '✳ Fix docker-compose...'."""
+    if not title:
+        return ""
+    # Strip leading status icon (✳ working, ✶, ✻, etc — Claude pulses)
+    stripped = title.lstrip("✳✶✻*● ").strip()
+    if not stripped or stripped == "Claude Code":
+        return ""
+    if len(stripped) > 50:
+        return stripped[:47] + "..."
+    return stripped
+
+
+def read_claude_cache() -> dict[int, dict]:
+    """Czyta cache hookow -> {pane_id: {state, branch, sid, ...}}.
+
+    Lazy GC: kasuje pliki gdzie pid nie zyje lub starsze niz TTL.
+    """
     if not CACHE.is_dir():
-        return 0
-
-    current_zsess = os.environ.get("ZELLIJ_SESSION_NAME", "")
-    rows = []
-
+        return {}
+    out: dict[int, dict] = {}
     for f in CACHE.glob("session-*"):
         d = parse(f)
         if not d:
             continue
-
         pid = d.get("pid", "")
-        ts_raw = d.get("updated_at", "0")
         try:
-            age = NOW - int(ts_raw)
+            age = NOW - int(d.get("updated_at", "0"))
         except ValueError:
             age = 0
-
         if age > TTL or (pid and not pid_alive(pid)):
             try:
                 f.unlink()
             except OSError:
                 pass
             continue
-
         state = d.get("state", "")
-        tab_id = d.get("tab_id", "")
-        pane_id = d.get("pane_id", "")
-        # zsess RAW — to faktyczna nazwa sesji Zellija (z emoji jesli sesja
-        # zostala kiedys renameowana). switch-session wymaga dokladnie tej
-        # nazwy. Strip robimy tylko w display column nizej.
-        zsess = d.get("zellij_session", "")
         sid = d.get("session_id", "")
-        cwd = d.get("cwd", "")
-        branch = d.get("branch", "")
-
-        if state not in EMOJI:
+        pane_id_raw = d.get("pane_id", "")
+        if state not in EMOJI or not sid or not pane_id_raw:
             continue
-        if not zsess or not sid:
+        try:
+            pane_id = int(pane_id_raw)
+        except ValueError:
             continue
-
-        # Lazy fallback dla sesji sprzed update'a hooka.
-        if not cwd:
-            cwd = lsof_cwd(pid)
-        if cwd and not branch:
-            branch = git_branch(cwd)
-
-        rows.append({
+        out[pane_id] = {
             "state": state,
-            "tab_id": tab_id,
-            "pane_id": pane_id,
-            "zsess": zsess,
+            "branch": d.get("branch", ""),
             "sid": sid,
-            "cwd": shorten_path(cwd) if cwd else "",
-            "branch": branch,
-        })
+        }
+    return out
+
+
+def main() -> int:
+    claude = read_claude_cache()
+    if not claude:
+        return 0
+
+    by_session = live_panes_by_session()
+    if not by_session:
+        # Zellij niedostepny lub brak sesji — degraded mode bez grupowania.
+        # Zostawiamy puste output, cj zglosi "brak Claude'ow".
+        return 0
+
+    my_session = find_my_session(by_session, os.environ.get("ZELLIJ_PANE_ID"))
+
+    # Build rows: join claude cache z live panes.
+    rows = []
+    for sess, panes in by_session.items():
+        for p in panes:
+            pid = p.get("id")
+            if pid is None or pid not in claude:
+                continue
+            c = claude[pid]
+            rows.append({
+                "session": sess,
+                "tab_name": p.get("tab_name") or "?",
+                "pane_id": pid,
+                "title": shorten_title(p.get("title") or ""),
+                "cwd": p.get("pane_cwd") or "",
+                "state": c["state"],
+                "branch": c["branch"],
+                "sid": c["sid"],
+            })
 
     if not rows:
         return 0
 
-    # Grupowanie: current zellij session pierwsze, reszta alfabetycznie.
+    # Grupowanie po live session_name. My_session na gorze.
     by_group: dict[str, list] = {}
     for r in rows:
-        by_group.setdefault(r["zsess"], []).append(r)
+        by_group.setdefault(r["session"], []).append(r)
 
-    group_keys = sorted(by_group.keys(), key=lambda k: (k != current_zsess, k.lower()))
+    group_keys = sorted(
+        by_group.keys(),
+        key=lambda k: (k != my_session, k.lower()),
+    )
 
-    # Wyznacz wspolne szerokosci kolumn (across all rows, dla wyrownania w calej liscie).
-    cwd_w = max((display_width(r["cwd"]) for r in rows), default=0)
+    # Wyznacz wspolne szerokosci kolumn dla wyrownania.
+    tab_w = max((display_width(r["tab_name"]) for r in rows), default=0)
+    cwd_display = [shorten_path(r["cwd"]) if r["cwd"] else "" for r in rows]
+    cwd_w = max((display_width(c) for c in cwd_display), default=0)
     branch_w = max((display_width(r["branch"]) for r in rows), default=0)
 
-    # Mini caps zeby header nie ucieklo poza fzf.
-    cwd_w = min(cwd_w, 36)
+    tab_w = min(tab_w, 24)
+    cwd_w = min(cwd_w, 30)
     branch_w = min(branch_w, 22)
 
     out = []
     for gi, gk in enumerate(group_keys):
-        marker = " ← obecna" if gk == current_zsess else ""
-        display_gk = _EMOJI_PREFIX.sub("", gk)  # cosmetic strip tylko w header
-        header = f"{DIM}{CYAN}── 📺 {BOLD}{display_gk}{RESET}{DIM}{CYAN}{marker} ──{RESET}"
+        marker = " ← obecna" if gk == my_session else ""
+        header = f"{DIM}{CYAN}── 📺 {BOLD}{gk}{RESET}{DIM}{CYAN}{marker} ──{RESET}"
         # Header row: puste sid -> zsh bail.
         out.append(f"{header}\t\t\t\t")
 
         group_rows = sorted(
             by_group[gk],
-            key=lambda r: (ORDER[r["state"]], r["cwd"].lower()),
+            key=lambda r: (ORDER[r["state"]], r["tab_name"].lower()),
         )
         for r in group_rows:
             emoji = EMOJI[r["state"]]
             state_col = f"{STATE_COLOR[r['state']]}{emoji}{RESET}"
-            cwd_col = f"{GREY}{pad('📁 ' + r['cwd'] if r['cwd'] else '', cwd_w + 3)}{RESET}"
+            tab_col = f"{BOLD}{pad(r['tab_name'], tab_w)}{RESET}"
+            cwd_str = shorten_path(r["cwd"]) if r["cwd"] else ""
+            cwd_col = f"{GREY}{pad('📁 ' + cwd_str if cwd_str else '', cwd_w + 3)}{RESET}"
             branch_col = f"{MAGENTA}{pad('  ' + r['branch'] if r['branch'] else '', branch_w + 2)}{RESET}"
-            display = f"  {state_col}  {cwd_col}  {branch_col}"
-            out.append(f"{display}\t{r['zsess']}\t{r['tab_id']}\t{r['sid']}\t{r['pane_id']}")
+            title_col = f"{DIM}{r['title']}{RESET}" if r["title"] else ""
+            display = f"  {state_col}  {tab_col}  {cwd_col}  {branch_col}  {title_col}"
+            # TSV: display \t target_session \t my_session \t pane_id \t sid
+            out.append(
+                f"{display}\t{r['session']}\t{my_session or ''}\t{r['pane_id']}\t{r['sid']}"
+            )
 
         if gi < len(group_keys) - 1:
-            out.append(f"{DIM}{GREY}\t\t\t\t{RESET}")  # blank spacer (also non-selectable)
+            out.append(f"{DIM}{GREY}\t\t\t\t{RESET}")  # blank spacer
 
     sys.stdout.write("\n".join(out) + "\n")
     return 0
