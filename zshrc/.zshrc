@@ -168,10 +168,27 @@ cj() {
 # Rozwiazanie: rezolwuj binarke tu (w shellu wywolujacym, gdzie .zshrc juz
 # poprawil PATH) i podaj absolutna sciezke.
 claudet() {
-  local bin
+  local bin name
   bin="$(command -v claude 2>/dev/null)"
   [[ -z "$bin" ]] && { print -u2 "claudet: claude nie znaleziony w PATH"; return 127 }
-  zellij action new-tab --close-on-exit --cwd "$PWD" -- "$bin"
+  name="$*"
+  if [[ -z "$name" ]]; then
+    zellij action new-tab --close-on-exit --cwd "$PWD" -- "$bin"
+  else
+    zellij action new-tab --close-on-exit --cwd "$PWD" --name "$name" -- "$bin"
+  fi
+}
+
+# zt — nowy tab Zellija z nazwa. Uzycie: `zt Nowy Tab` albo `zt`.
+# Bez argumentu otwiera nienazwany tab. Tu PATH server-a nie ma znaczenia, bo
+# nie odpalamy customowego commandu (tylko domyslny shell wg zellij config).
+zt() {
+  local name="$*"
+  if [[ -z "$name" ]]; then
+    zellij action new-tab --cwd "$PWD"
+  else
+    zellij action new-tab --cwd "$PWD" --name "$name"
+  fi
 }
 
 # ============================================================================
