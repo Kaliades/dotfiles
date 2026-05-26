@@ -1,9 +1,8 @@
 """
 Shared helper: pobiera LIVE metadata Zellija przez `zellij action list-panes -a -j`.
 
-Dwa konsumenty:
+Konsument:
   - _cj.py: picker sesji Claude'a (z fzf)
-  - _others_status.py: statusline statusow innych Claude'ow
 
 Dlaczego live zamiast cache: $ZELLIJ_SESSION_NAME w env jest snapshotem z momentu
 startu pane'a — po `rename-session` ZELLIJ NIE aktualizuje env w istniejacych

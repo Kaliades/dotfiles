@@ -21,7 +21,6 @@ bez wywołań do zellij socketa — `cj` używa `pane_id` żeby zrobić
 | `claude-hook.sh` | **Dispatcher** — jeden entry-point dla wszystkich eventów. Bierze nazwę eventu jako `$1`, czyta JSON z stdin, synchronicznie pisze cache. |
 | `_lib.sh` | Biblioteka I/O na TSV cache + normalizacja `$ZELLIJ_SESSION_NAME`. Source'owana przez dispatcher. |
 | `_cj.py` | Helper dla zshowej funkcji `cj` — listuje aktywne sesje w formacie pod fzf. **Nie jest hookiem.** |
-| `_others_status.py` | Renderuje sekcję statusline z innymi aktywnymi sesjami. **Nie jest hookiem** (odpalany ze `statusline-command.sh`). |
 
 ## Mapowanie event → Claude Code hook
 
@@ -68,8 +67,7 @@ pid             <ppid hooka>
 ```
 
 Lazy-GC: wpisy starsze niż 24h albo z martwym PID są filtrowane przez
-`_cj.py` / `_others_status.py` i kasowane przy odczycie. Pełne czyszczenie
-wpisu robi `SessionEnd`.
+`_cj.py` i kasowane przy odczycie. Pełne czyszczenie wpisu robi `SessionEnd`.
 
 ## Komplementarna integracja w zsh
 
