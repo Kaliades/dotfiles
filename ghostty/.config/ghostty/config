@@ -26,7 +26,6 @@ macos-option-as-alt = true
 # Automatyczne odpalanie Zellij przy starcie Ghostty
 # attach -c main: dołącza do sesji "main" jeśli istnieje, w przeciwnym razie tworzy nową
 command = /bin/zsh -l -c '/opt/homebrew/bin/zellij attach -c main'
-
 # --- Wyłącz wszystkie keybindy Ghostty kolidujące z Zellij ---
 # Zellij zarządza panelami / tabami / splitami — Ghostty trzyma się z dala.
 # Zachowane: standardowe macOS (copy/paste/quit/settings/font-size).
