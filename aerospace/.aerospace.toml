@@ -94,8 +94,9 @@ outer.right = 2
 # '''
 # alt-ctrl-cmd-shift-1 = 'move-node-to-workspace 1'
 # See: https://nikitabobko.github.io/AeroSpace/commands#layout
-alt-ctrl-shift-cmd-slash = 'layout tiles horizontal vertical'
-alt-ctrl-shift-cmd-comma = 'layout accordion horizontal vertical'
+# t = tiles <-> accordion, o = orientacja pozioma <-> pionowa
+alt-ctrl-shift-cmd-t = 'layout tiles accordion'
+alt-ctrl-shift-cmd-o = 'layout horizontal vertical'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#focus
 alt-ctrl-shift-h = 'focus left'
