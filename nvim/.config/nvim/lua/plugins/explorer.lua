@@ -11,12 +11,12 @@ return {
         files = {
           hidden = true,
           ignored = true,
-          exclude = { ".git", "build", "node_modules", "out", ".nuxt", ".react-router", ".shopify" },
+          exclude = { ".git", "build", "node_modules", "out", ".nuxt", ".react-router", ".shopify", "vendor", "var", "public" },
         },
         grep = {
           hidden = true,
           ignored = true,
-          exclude = { ".git", "build", "node_modules", "out", ".nuxt", ".react-router", ".shopify" },
+          exclude = { ".git", "build", "node_modules", "out", ".nuxt", ".react-router", ".shopify", "vendor", "var", "public" },
         },
       },
     },
