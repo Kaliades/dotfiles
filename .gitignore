@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 *.pyo
+
+# Karabiner regeneruje te katalogi sam — trzymamy tylko karabiner.json
+karabiner/.config/karabiner/automatic_backups/
+karabiner/.config/karabiner/assets/

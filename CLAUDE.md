@@ -17,6 +17,7 @@ Each tool gets its own top-level directory mirroring the home directory layout:
 - `claude/` — Claude Code config (`.claude/statusline-command.sh` + `.claude/hooks/` dispatcher + helpers)
 - `nvim/` — Neovim config (`.config/nvim/`) — LazyVim starter with lazy.nvim plugin manager
 - `aerospace/` — AeroSpace tiling window manager config (`.aerospace.toml`)
+- `karabiner/` — Karabiner-Elements config (`.config/karabiner/karabiner.json`) — `automatic_backups/` i `assets/` są ignorowane (Karabiner regeneruje je sam)
 
 New tools should follow the same pattern: `<tool-name>/` containing files in their home-relative paths.
 
