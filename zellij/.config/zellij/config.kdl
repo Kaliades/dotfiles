@@ -187,6 +187,15 @@ keybinds clear-defaults=true {
             }
         }
         bind "Alt w" { CloseFocus; }
+        // Floating cheat-sheet z bindami (compact-bar nie pokazuje hintów per tryb).
+        // bat renderuje markdown z motywem Catppuccin Mocha. q żeby zamknąć.
+        bind "Alt Shift /" {
+            Run "/opt/homebrew/bin/bat" "--style=plain" "--paging=always" "--theme=Catppuccin Mocha" "/Users/pbx_sk/.config/zellij/cheatsheet.md" {
+                floating true
+                close_on_exit true
+                name "cheatsheet"
+            }
+        }
     }
     shared_except "locked" "move" {
         bind "Ctrl h" { SwitchToMode "move"; }
@@ -349,8 +358,8 @@ theme "catppuccin-mocha"
  
 // The name of the default layout to load on startup
 // Default: "default"
-// 
-// default_layout "compact"
+//
+default_layout "compact"
  
 // The folder in which Zellij will look for layouts
 // (Requires restart)
