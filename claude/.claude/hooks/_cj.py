@@ -112,14 +112,18 @@ def shorten_title(title: str) -> str:
     return stripped
 
 
-def read_claude_cache() -> dict[int, dict]:
-    """Czyta cache hookow -> {pane_id: {state, branch, sid, ...}}.
+def read_claude_cache() -> dict[tuple[str, int], dict]:
+    """Czyta cache hookow -> {(zellij_session, pane_id): {state, branch, sid, ...}}.
+
+    Klucz wymaga pary (zellij_session, pane_id) bo pane_id nie jest unikalny
+    globalnie — kazda sesja zellij ma swoje pane_id 0,1,2,... Wpisy bez
+    zellij_session (legacy / hook fired poza zellijem) sa pomijane.
 
     Lazy GC: kasuje pliki gdzie pid nie zyje lub starsze niz TTL.
     """
     if not CACHE.is_dir():
         return {}
-    out: dict[int, dict] = {}
+    out: dict[tuple[str, int], dict] = {}
     for f in CACHE.glob("session-*"):
         d = parse(f)
         if not d:
@@ -138,13 +142,14 @@ def read_claude_cache() -> dict[int, dict]:
         state = d.get("state", "")
         sid = d.get("session_id", "")
         pane_id_raw = d.get("pane_id", "")
-        if state not in EMOJI or not sid or not pane_id_raw:
+        zellij_session = d.get("zellij_session", "")
+        if state not in EMOJI or not sid or not pane_id_raw or not zellij_session:
             continue
         try:
             pane_id = int(pane_id_raw)
         except ValueError:
             continue
-        out[pane_id] = {
+        out[(zellij_session, pane_id)] = {
             "state": state,
             "branch": d.get("branch", ""),
             "sid": sid,
@@ -165,14 +170,16 @@ def main() -> int:
 
     my_session = find_my_session(by_session, os.environ.get("ZELLIJ_PANE_ID"))
 
-    # Build rows: join claude cache z live panes.
+    # Build rows: join claude cache z live panes po (zellij_session, pane_id).
     rows = []
     for sess, panes in by_session.items():
         for p in panes:
             pid = p.get("id")
-            if pid is None or pid not in claude:
+            if pid is None:
                 continue
-            c = claude[pid]
+            c = claude.get((sess, pid))
+            if c is None:
+                continue
             rows.append({
                 "session": sess,
                 "tab_name": p.get("tab_name") or "?",

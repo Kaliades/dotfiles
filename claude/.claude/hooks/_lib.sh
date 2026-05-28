@@ -6,13 +6,15 @@
 # rownolegle mutujace 'zellij action' (rename-tab) zatykaja socket
 # i tworza wiszace subshelle.
 #
-# Live metadata (nazwa sesji, tab_name, cwd) bierzemy z `zellij action
-# list-panes -a -j` w _cj.py — to live, omija problem stale $ZELLIJ_SESSION_NAME.
-# W cache trzymamy tylko CLAUDE-side state ktorego Zellij nie wie:
+# Live metadata (tab_name, cwd) bierzemy z `zellij action list-panes -a -j`
+# w _cj.py. W cache trzymamy CLAUDE-side state + minimum potrzebne do joinu:
 #   - session_id (Claude'a)
 #   - state (idle/working/done/waiting)
 #   - branch (git, bo Zellij gita nie zna)
-#   - pane_id ($ZELLIJ_PANE_ID, stabilne — join-key do list-panes)
+#   - pane_id ($ZELLIJ_PANE_ID, stabilne)
+#   - zellij_session ($ZELLIJ_SESSION_NAME) — bo pane_id NIE jest unikalne
+#     globalnie (kazda sesja zellij ma swoje 0,1,2...), wiec join wymaga pary
+#     (zellij_session, pane_id). Stale tylko po rename — najblizszy hook fix-uje.
 #   - updated_at, pid
 
 _cache_dir() {
@@ -33,8 +35,8 @@ read_session_field() {
 
 # write_session_field <sid> <field> <value>
 # Atomowo: load -> set field -> save. Preserves wszystkie inne pola,
-# ZAWSZE odswieza meta (updated_at, pid). Wycina stale pola (zellij_session,
-# cwd) gdyby ktos uruchomil cj z plikiem cache sprzed migracji.
+# ZAWSZE odswieza meta (updated_at, pid, zellij_session). Wycina stale
+# 'cwd' (legacy) gdyby ktos mial plik cache sprzed migracji.
 write_session_field() {
   local sid="$1"
   local field="$2"
@@ -43,19 +45,22 @@ write_session_field() {
   local file; file="$(_session_file "$sid")"
   local tmp="$file.tmp.$$"
   local ts; ts="$(date +%s)"
+  local zs="${ZELLIJ_SESSION_NAME:-}"
   mkdir -p "$(_cache_dir)"
   {
     if [ -f "$file" ]; then
       awk -F'\t' -v skip="$field" '
         $1 == skip { next }
         $1 == "updated_at" || $1 == "pid" || $1 == "session_id" { next }
-        # Legacy fields — wycinaj zawsze, juz nie pisane.
-        $1 == "zellij_session" || $1 == "cwd" { next }
+        $1 == "zellij_session" { next }
+        # Legacy field — wycinaj zawsze, juz nie pisane.
+        $1 == "cwd" { next }
         { print }
       ' "$file"
     fi
     printf 'session_id\t%s\n' "$sid"
     printf '%s\t%s\n' "$field" "$value"
+    [ -n "$zs" ] && printf 'zellij_session\t%s\n' "$zs"
     printf 'updated_at\t%s\n' "$ts"
     printf 'pid\t%s\n' "${PPID:-}"
   } > "$tmp" 2>/dev/null && mv -f "$tmp" "$file"
