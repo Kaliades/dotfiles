@@ -77,7 +77,9 @@ now_epoch=$(date +%s)
 
 use_cache=false
 if [ -f "$CACHE_FILE" ]; then
-  cache_age=$((now_epoch - $(stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)))
+  # stat: -f %m (BSD/macOS) vs -c %Y (GNU/Linux)
+  mtime=$(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+  cache_age=$((now_epoch - mtime))
   if [ "$cache_age" -lt "$CACHE_MAX_AGE" ]; then
     use_cache=true
   fi
@@ -86,8 +88,19 @@ fi
 if [ "$use_cache" = true ]; then
   usage_json=$(cat "$CACHE_FILE")
 else
-  TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null |
-    python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" 2>/dev/null)
+  # Token OAuth — warstwowo, przenośnie:
+  #   1) $CLAUDE_CODE_OAUTH_TOKEN (uniwersalny override, działa też pod SSH)
+  #   2) macOS Keychain
+  #   3) Linux: ~/.claude/.credentials.json (ten sam JSON co w Keychainie)
+  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+    TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"
+  elif [ "$(uname)" = "Darwin" ]; then
+    TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null |
+      python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" 2>/dev/null)
+  else
+    TOKEN=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" \
+      < "$HOME/.claude/.credentials.json" 2>/dev/null)
+  fi
   if [ -n "$TOKEN" ]; then
     usage_json=$(curl -s --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
       -H "Authorization: Bearer $TOKEN" \
