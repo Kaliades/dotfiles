@@ -18,7 +18,13 @@ shell-integration-features = no-cursor
 confirm-close-surface = false
 keybind = shift+enter=text:\x1b\r
 window-save-state = never
-window-decoration = false
+
+# Minimalistyczne okno, ale z natywną ramką + zaokrąglonymi rogami + cieniem.
+# macos-titlebar-style = hidden ukrywa pasek tytułu BEZ usuwania ramki/rogów
+# (w przeciwieństwie do window-decoration = none, które robi goły prostokąt).
+# Wymaga window-decoration != none, więc zostawiamy auto.
+window-decoration = auto
+macos-titlebar-style = hidden
 
 # Żeby skróty klawiszowe (np. Alt/Option) działały poprawnie w Tmuxie
 macos-option-as-alt = true
