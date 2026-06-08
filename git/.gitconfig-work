@@ -1,0 +1,5 @@
+# Tożsamość FIRMOWA (Printbox). Ładowana przez includeIf z ~/.gitconfig
+# tylko dla repo z remotem na git.getprintbox.com. Nadpisuje [user] z defaulta.
+[user]
+	email = s.kulinski@getprintbox.com
+	name = Szymon Kulinski

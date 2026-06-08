@@ -1,31 +1,59 @@
 # This is Git's per-user configuration file.
+
+# Tożsamość DOMYŚLNA (prywatna). Firmowa wstrzykiwana niżej przez includeIf
+# na podstawie hosta remote'a, więc to jest fallback dla repo prywatnych/lokalnych.
 [user]
 	email = szym.kulinski@gmail.com
 	name = Simon Kulinski
-# Please adapt and uncomment the following lines:
-#	name = Szymon Kulinski
-#	email = simon@MacBook-Air-Szymon.local
+
+# Tożsamość FIRMOWA — ładowana TYLKO gdy repo ma remote na git.getprintbox.com.
+# Działa niezależnie od katalogu (po hoście, nie po ścieżce). Plik stowowany.
+# UWAGA: hasconfig wymaga skonfigurowanego remote — po świeżym `git init` bez
+# origina trafia default; po `git clone` z firmy działa od razu.
+# Glob: `*`=grupa (bez `/`), `**` (otoczone slashem) łapie resztę i zagnieżdżenia
+# (np. ecommerce/shopware/flux.git). Bez slasha przed `**` git traktuje je jak
+# zwykłe `*`, które nie przechodzi przez `/` → wtedy match by NIE zadziałał.
+[includeIf "hasconfig:remote.*.url:git@git.getprintbox.com:*/**"]
+	path = ~/.gitconfig-work
+
 [core]
-    pager = delta
+	pager = delta
+	autocrlf = input
 
 [interactive]
-    diffFilter = delta --color-only
+	diffFilter = delta --color-only
 
 [delta]
-    # Główny motyw
-    syntax-theme = Catppuccin Mocha
+	# Główny motyw (cały stack na Catppuccin Mocha)
+	syntax-theme = Catppuccin Mocha
 
-    # Wygląd
-    line-numbers = true
-    side-by-side = true        # Widok dwóch kolumn
-    navigate = true            # 'n' i 'p' skaczą między plikami
+	# Wygląd
+	line-numbers = true
+	side-by-side = true        # Widok dwóch kolumn
+	navigate = true            # 'n' i 'p' skaczą między plikami
 
-    # Styl obramowania i nagłówków (Hunk Headers)
-    hunk-header-style = omit   # Usuwa zbędne śmieci, zostawia czysty widok
+	# Styl obramowania i nagłówków (Hunk Headers)
+	hunk-header-style = omit   # Usuwa zbędne śmieci, zostawia czysty widok
 
-    hyperlinks = true          # klikalne ścieżki plików w terminalu
-    tabs = 4
-    true-color = always        # Ghostty to ogarnia
-    wrap-max-lines = unlimited # side-by-side nie ucina długich linii
+	hyperlinks = true          # klikalne ścieżki plików w terminalu
+	hyperlinks-file-link-format = "nvim://file/{path}:{line}"  # klik → skok do nvima
+	tabs = 4
+	true-color = always        # Ghostty to ogarnia
+	wrap-max-lines = unlimited # side-by-side nie ucina długich linii
+
 [merge]
-    conflictstyle = zdiff3
+	conflictstyle = zdiff3
+
+[diff]
+	colorMoved = default       # podświetla przeniesione bloki innym kolorem
+
+[rerere]
+	enabled = true             # zapamiętuje rozwiązania konfliktów
+	autoupdate = true          # i auto-stage'uje je przy powtórce
+
+# Override per-urządzenie — NIE w repo (niestowowany). Tu wrzucasz rzeczy
+# specyficzne dla maszyny (klucz do podpisu, op-ssh-sign, lokalne ścieżki).
+# Git po cichu ignoruje brak pliku, więc na maszynie bez niego nic się nie psuje.
+# Musi być na KOŃCU, żeby nadpisywał wszystko powyżej.
+[include]
+	path = ~/.gitconfig.local

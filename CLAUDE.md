@@ -12,7 +12,7 @@ Each tool gets its own top-level directory mirroring the home directory layout:
 
 - `ghostty/` — Ghostty terminal config (`.config/ghostty/config`)
 - `zellij/` — Zellij multiplexer config (`.config/zellij/config.kdl`)
-- `git/` — Git config (`.gitconfig`) + Lazygit config (`.config/lazygit/config.yml`)
+- `git/` — Git config (`.gitconfig` + `.gitconfig-work`) + Lazygit config (`.config/lazygit/config.yml`)
 - `zshrc/` — Zsh config (`.zshrc`)
 - `claude/` — Claude Code config (`.claude/statusline-command.sh` + `.claude/hooks/` dispatcher + helpers)
 - `nvim/` — Neovim config (`.config/nvim/`) — LazyVim starter with lazy.nvim plugin manager
@@ -27,6 +27,10 @@ New tools should follow the same pattern: `<tool-name>/` containing files in the
 - **Language**: Comments and descriptions in Polish
 - **Theme**: cały stack na Catppuccin Mocha (Ghostty / Zellij / Starship / nvim / Yazi / bat / delta). `BAT_THEME` i delta `syntax-theme` = `Catppuccin Mocha` (motyw wbudowany w bat ≥0.26, więc bez doinstalowania)
 - **Git pager**: delta with side-by-side, Catppuccin Mocha syntax theme — Lazygit overrides delta to use `--no-gitconfig` with matching flags
+- **Git — split tożsamości (3 warstwy)**: `.gitconfig` trzyma wspólne ustawienia (delta, merge, rerere, diff) + **domyślną tożsamość prywatną** (gmail). Dwie nakładki:
+  - `~/.gitconfig-work` (stowowany, **trackowany**) — tożsamość firmowa (getprintbox). Ładowany przez `[includeIf "hasconfig:remote.*.url:git@git.getprintbox.com:*/**"]`, czyli **po hoście remote'a**, nie po katalogu (`~/Workspace` jest mieszane). Glob: `**` musi być otoczone slashem (`:*/**`) żeby przeszło przez `/` w `grupa/repo.git` — bez slasha git traktuje `**` jak zwykłe `*` i match nie zadziała. Trackowany = jedzie na każdy komp, firmowy email „za darmo" po `stow`
+  - `~/.gitconfig.local` (**NIE w repo**, per-urządzenie) — dołączany `[include]` na końcu `.gitconfig`, nadpisuje wszystko. Tu rzeczy specyficzne dla maszyny: podpis SSH przez 1Password (`gpg.ssh.program=op-ssh-sign`, `signingkey`, `commit.gpgsign`). Nie może być trackowany, bo na maszynie bez 1Password pod tą ścieżką każdy commit by failował. Wzorzec do skopiowania: `git/.gitconfig.local.example`. Git po cichu ignoruje brak tego pliku
+  - **Dwie osie**: `-work` = per-kontekst (które repo, to samo na każdym kompie), `.local` = per-urządzenie (która maszyna). Dlatego oba mają sens jednocześnie
 - **Terminal session**: Ghostty `command` auto-attacha do sesji Zellij `main` przy starcie. Tmux został wycofany (2026-05).
 - **Shell**: Zsh with Oh My Zsh, lazy-loaded NVM and pyenv for fast startup. Prompt: Starship (jedyny)
 - **Prompt (starship)**: `.zshrc` ma pusty `ZSH_THEME` (OMZ nie rysuje promptu) i na końcu pliku robi `eval "$(starship init zsh)"` jeśli binarka jest dostępna (jak nieobecna → goły prompt zsh, bez błędów). Config = `catppuccin-powerline` preset (single-line powerline + `line_break` włączony, więc `❯` na osobnej linii). Starship = jeden binarek + jeden TOML, cross-shell (zsh/bash) — instalacja na remote: `brew install starship` lub `curl -sS https://starship.rs/install.sh | sh`. p10k został wycofany (2026-06)

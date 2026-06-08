@@ -1,0 +1,21 @@
+# PRZYKŁAD overrideu per-urządzenie.
+#
+# Skopiuj na nową maszynę:  cp ~/.gitconfig.local.example ~/.gitconfig.local
+# (sam ~/.gitconfig.local NIE jest w repo — celowo, jest specyficzny dla maszyny.)
+#
+# Ten plik jest dołączany na KOŃCU ~/.gitconfig, więc nadpisuje wszystko powyżej.
+
+# Podpisywanie commitów kluczem SSH przez 1Password.
+# signingkey = Twój publiczny klucz SSH; program = ścieżka do op-ssh-sign na TEJ maszynie.
+# [user]
+#	signingkey = ssh-ed25519 AAAA...twój-klucz...
+# [gpg]
+#	format = ssh
+# [gpg "ssh"]
+#	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+# [commit]
+#	gpgsign = true
+
+# Albo nadpisz nazwę/email tylko na tym urządzeniu:
+# [user]
+#	name = Szymon (laptop prywatny)
