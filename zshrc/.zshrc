@@ -181,6 +181,59 @@ zt() {
   fi
 }
 
+# wt — zarządzanie git worktree. fzf-picker + subkomendy.
+# Nowe worktree lądują w ../<repo>.worktrees/<branch> (katalog-siostra repo),
+# liczone zawsze od GŁÓWNEGO worktree (pierwsza linia `git worktree list`),
+# więc działa spójnie niezależnie od tego, w którym worktree teraz siedzisz.
+#   wt              — fzf-picker istniejących worktree → cd
+#   wt add <branch> — utwórz worktree (nowy lub istniejący branch) → cd
+#   wt rm           — fzf-picker → usuń worktree (git worktree remove)
+#   wt ls           — lista worktree
+wt() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || { print -u2 "wt: nie jesteś w repo gita"; return 1 }
+
+  local main_root repo wt_dir cmd
+  main_root="$(git worktree list --porcelain | awk 'NR==1{sub(/^worktree /,""); print}')"
+  repo="${main_root:t}"
+  wt_dir="${main_root:h}/${repo}.worktrees"
+
+  cmd="${1:-}"; (( $# )) && shift
+  case "$cmd" in
+    add)
+      local branch="$1" path
+      [[ -z "$branch" ]] && { print -u2 "wt add: podaj nazwę brancha"; return 1 }
+      path="$wt_dir/${branch//\//-}"  # spłaszcz feature/x -> feature-x
+      [[ -e "$path" ]] && { print -u2 "wt add: $path już istnieje"; return 1 }
+      if git show-ref --verify --quiet "refs/heads/$branch"; then
+        git worktree add "$path" "$branch" || return $?   # istniejący branch
+      else
+        git worktree add -b "$branch" "$path" || return $? # nowy branch od HEAD
+      fi
+      cd "$path"
+      ;;
+    rm|remove)
+      command -v fzf >/dev/null || { print -u2 "wt: wymagany fzf"; return 1 }
+      local picked
+      picked="$(git worktree list | fzf --prompt='rm worktree > ' --height=40% --reverse)" || return 0
+      [[ -n "${picked%% *}" ]] && git worktree remove "${picked%% *}"
+      ;;
+    ls|list)
+      git worktree list
+      ;;
+    "")
+      command -v fzf >/dev/null || { print -u2 "wt: wymagany fzf"; return 1 }
+      local picked
+      picked="$(git worktree list | fzf --prompt='worktree > ' --height=40% --reverse)" || return 0
+      [[ -n "${picked%% *}" ]] && cd "${picked%% *}"
+      ;;
+    *)
+      print -u2 "wt: nieznana komenda '$cmd' (add | rm | ls | <brak>)"
+      return 1
+      ;;
+  esac
+}
+
 # ============================================================================
 # Środowisko
 # ============================================================================
