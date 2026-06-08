@@ -190,7 +190,7 @@ keybinds clear-defaults=true {
         // Floating cheat-sheet z bindami (compact-bar nie pokazuje hintów per tryb).
         // bat renderuje markdown z motywem Catppuccin Mocha. q żeby zamknąć.
         bind "Alt Shift /" {
-            Run "/opt/homebrew/bin/bat" "--style=plain" "--paging=always" "--theme=Catppuccin Mocha" "/Users/pbx_sk/.config/zellij/cheatsheet.md" {
+            Run "sh" "-c" "PATH=\"/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH\" exec bat --style=plain --paging=always --theme='Catppuccin Mocha' \"$HOME/.config/zellij/cheatsheet.md\"" {
                 floating true
                 close_on_exit true
                 name "cheatsheet"
