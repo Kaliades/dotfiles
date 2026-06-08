@@ -23,16 +23,21 @@ source "$ZSH/oh-my-zsh.sh"
 # ============================================================================
 typeset -U path  # automatyczna deduplikacja PATH
 
+# pnpm — macOS trzyma w ~/Library, Linux w XDG data dir. Liczone przed `path`,
+# bo wstawiamy $PNPM_HOME do PATH.
+if [[ "$OSTYPE" == darwin* ]]; then
+  export PNPM_HOME="$HOME/Library/pnpm"
+else
+  export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm"
+fi
+
 path=(
   "$HOME/.local/bin"
   "$HOME/.composer/vendor/bin"
-  "$HOME/Library/pnpm"
+  "$PNPM_HOME"
   "$HOME/.pyenv/bin"
   $path
 )
-
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
 
 # ============================================================================
 # NVM — lazy loading (~400ms szybszy start)
@@ -47,10 +52,22 @@ if [[ -f "$NVM_DIR/alias/default" ]]; then
   unset _nvm_default _nvm_default_path
 fi
 
+# Sourcing z wielu lokalizacji — pokrywa brew-mac, linuxbrew i klasyczny
+# curl-install ($NVM_DIR/nvm.sh). Źródłuje pierwszy istniejący plik.
 nvm() {
   unfunction nvm node npm npx 2>/dev/null
-  [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
-  [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+  local _c
+  for _c in "$NVM_DIR/nvm.sh" \
+            "/opt/homebrew/opt/nvm/nvm.sh" \
+            "/usr/local/opt/nvm/nvm.sh" \
+            "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh"; do
+    [ -s "$_c" ] && { \. "$_c"; break; }
+  done
+  for _c in "$NVM_DIR/bash_completion" \
+            "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" \
+            "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm"; do
+    [ -s "$_c" ] && { \. "$_c"; break; }
+  done
   nvm "$@"
 }
 
