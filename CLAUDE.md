@@ -17,6 +17,7 @@ Each tool gets its own top-level directory mirroring the home directory layout:
 - `claude/` — Claude Code config (`.claude/statusline-command.sh` + `.claude/hooks/` dispatcher + helpers)
 - `nvim/` — Neovim config (`.config/nvim/`) — LazyVim starter with lazy.nvim plugin manager
 - `aerospace/` — AeroSpace tiling window manager config (`.aerospace.toml`)
+- `starship/` — Starship prompt (`.config/starship.toml`) — **domyślny prompt** (cross-shell, Catppuccin Powerline preset). Przełącznik `DOTFILES_PROMPT` (patrz Shell)
 - `karabiner/` — Karabiner-Elements config (`.config/karabiner/karabiner.json`) — `automatic_backups/` i `assets/` są ignorowane (Karabiner regeneruje je sam)
 
 New tools should follow the same pattern: `<tool-name>/` containing files in their home-relative paths.
@@ -27,7 +28,8 @@ New tools should follow the same pattern: `<tool-name>/` containing files in the
 - **Theme**: cały stack na Catppuccin Mocha (Ghostty / Zellij / Helix / Zed / nvim / Yazi / delta przez bat)
 - **Git pager**: delta with side-by-side, Catppuccin Mocha syntax theme — Lazygit overrides delta to use `--no-gitconfig` with matching flags
 - **Terminal session**: Ghostty `command` auto-attacha do sesji Zellij `main` przy starcie. Tmux został wycofany (2026-05).
-- **Shell**: Zsh with Oh My Zsh + Powerlevel10k, lazy-loaded NVM and pyenv for fast startup
+- **Shell**: Zsh with Oh My Zsh, lazy-loaded NVM and pyenv for fast startup. Prompt: Starship (domyślny), p10k jako fallback
+- **Prompt (starship ↔ p10k)**: `.zshrc` ma przełącznik `DOTFILES_PROMPT` (domyślnie `starship`). Wróć do p10k przez env (`export DOTFILES_PROMPT=p10k`) albo plik `~/.dotfiles-prompt` (NIE stowowany — pozwala mieć inny prompt per-maszyna). Dla `starship`: `.zshrc` pomija p10k instant prompt + ZSH_THEME i robi `eval "$(starship init zsh)"` na końcu. Jeśli `starship` wybrany ale binarka nieobecna → automatyczny fallback na p10k. Config = `catppuccin-powerline` preset (single-line powerline + `line_break` włączony, więc `❯` na osobnej linii). Starship = jeden binarek + jeden TOML, cross-shell (zsh/bash) — instalacja na remote: `brew install starship` lub `curl -sS https://starship.rs/install.sh | sh`. p10k (`.p10k.zsh`) zostaje w repo jako fallback
 - **Neovim**: LazyVim distro — plugins in `lua/plugins/`, config in `lua/config/` (options, keymaps, autocmds). Custom plugins go in `lua/plugins/` as new `.lua` files
 - **Claude Code statusline**: Custom bash script that shows working dir, context remaining %, git branch/status, and API usage with reset timer (cached 60s). Reads OAuth token from macOS Keychain
 - **Claude Code hooki**: `claude/.claude/hooks/` zawiera dispatcher (`claude-hook.sh`) wpięty pod 5 eventów (`SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, `SessionEnd`) — **utrzymują tylko cache stanu sesji** w `~/.claude/cache/session-<sid>` (TSV). Zero wywołań `zellij action` (wcześniejsza wersja renameowała tab/sesję ale generowała zombie subshelle przez zatkany socket). Hooki czytają `$ZELLIJ_SESSION_NAME` i `$ZELLIJ_PANE_ID` z env i zapisują do cache — `cj` używa `pane_id` do `focus-pane-id` (jump do konkretnego pane'a Claude'a). Szczegóły: `claude/.claude/hooks/README.md`. Wiring eventów do hooków siedzi w `~/.claude/settings.json` — to plik runtime'owy Claude Code, NIE jest stowowany

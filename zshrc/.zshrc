@@ -1,7 +1,19 @@
 # ============================================================================
-# Powerlevel10k Instant Prompt (musi być na samej górze)
+# Prompt: Starship (domyślnie) lub Powerlevel10k — przełącznik DOTFILES_PROMPT
+# Wróć do p10k: `export DOTFILES_PROMPT=p10k` albo `echo p10k > ~/.dotfiles-prompt`
+# (~/.dotfiles-prompt NIE jest stowowany — pozwala mieć inny prompt per-maszyna)
 # ============================================================================
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+if [[ -z "${DOTFILES_PROMPT:-}" && -r ~/.dotfiles-prompt ]]; then
+  IFS= read -r DOTFILES_PROMPT < ~/.dotfiles-prompt
+fi
+: "${DOTFILES_PROMPT:=starship}"
+# starship wybrany, ale niezainstalowany → bezpieczny fallback na p10k
+if [[ "$DOTFILES_PROMPT" == starship ]] && ! command -v starship &>/dev/null; then
+  DOTFILES_PROMPT=p10k
+fi
+
+# Powerlevel10k Instant Prompt (musi być na samej górze) — tylko dla p10k
+if [[ "$DOTFILES_PROMPT" == p10k && -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
@@ -9,7 +21,8 @@ fi
 # Oh My Zsh — konfiguracja
 # ============================================================================
 export ZSH="$HOME/.oh-my-zsh"
-ZSH_THEME="powerlevel10k/powerlevel10k"
+# Motyw p10k tylko gdy go używamy — przy starship zostawiamy pusty (init na dole pliku)
+[[ "$DOTFILES_PROMPT" == p10k ]] && ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # Pluginy — dodaj zsh-autosuggestions i zsh-syntax-highlighting:
 #   git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
@@ -197,7 +210,11 @@ export BAT_THEME="gruvbox-dark"
 # Sekrety (upewnij się: chmod 600 ~/.secrets)
 [[ -f ~/.secrets ]] && source ~/.secrets
 
-# Powerlevel10k config
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# Prompt — init wybranego silnika (patrz przełącznik DOTFILES_PROMPT na górze pliku)
+if [[ "$DOTFILES_PROMPT" == starship ]] && command -v starship &>/dev/null; then
+  eval "$(starship init zsh)"
+else
+  [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+fi
 ## custom
 [[ ! -f "$HOME/.custom" ]] || source "$HOME/.custom"
