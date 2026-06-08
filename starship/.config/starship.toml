@@ -4,6 +4,7 @@ format = """
 [](red)\
 $os\
 $username\
+$hostname\
 [](bg:peach fg:red)\
 $directory\
 [](bg:yellow fg:peach)\
@@ -62,6 +63,15 @@ show_always = true
 style_user = "bg:red fg:crust"
 style_root = "bg:red fg:crust"
 format = '[ $user]($style)'
+
+# Hostname — tylko na SSH (ssh_only domyślnie true). Lokalnie moduł nic nie
+# renderuje, więc prompt na własnej maszynie zostaje bez zmian. Trzyma się
+# czerwonego segmentu obok username.
+[hostname]
+ssh_only = true
+ssh_symbol = "🌐 "
+style = "bg:red fg:crust"
+format = '[ $ssh_symbol$hostname]($style)'
 
 [directory]
 style = "bg:peach fg:crust"
