@@ -25,7 +25,7 @@ New tools should follow the same pattern: `<tool-name>/` containing files in the
 ## Key Details
 
 - **Language**: Comments and descriptions in Polish
-- **Theme**: cały stack na Catppuccin Mocha (Ghostty / Zellij / Helix / Zed / nvim / Yazi / delta przez bat)
+- **Theme**: cały stack na Catppuccin Mocha (Ghostty / Zellij / Starship / nvim / Yazi / bat / delta). `BAT_THEME` i delta `syntax-theme` = `Catppuccin Mocha` (motyw wbudowany w bat ≥0.26, więc bez doinstalowania)
 - **Git pager**: delta with side-by-side, Catppuccin Mocha syntax theme — Lazygit overrides delta to use `--no-gitconfig` with matching flags
 - **Terminal session**: Ghostty `command` auto-attacha do sesji Zellij `main` przy starcie. Tmux został wycofany (2026-05).
 - **Shell**: Zsh with Oh My Zsh, lazy-loaded NVM and pyenv for fast startup. Prompt: Starship (domyślny), p10k jako fallback
