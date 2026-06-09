@@ -77,8 +77,10 @@ now_epoch=$(date +%s)
 
 use_cache=false
 if [ -f "$CACHE_FILE" ]; then
-  # stat: -f %m (BSD/macOS) vs -c %Y (GNU/Linux)
-  mtime=$(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+  # stat: -c %Y (GNU/Linux) first, then -f %m (BSD/macOS). GNU must come first:
+  # `stat -f` on GNU means --file-system and exits 0, so a BSD-first order never
+  # falls through and mtime ends up as the filesystem-info block, not an epoch.
+  mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)
   cache_age=$((now_epoch - mtime))
   if [ "$cache_age" -lt "$CACHE_MAX_AGE" ]; then
     use_cache=true

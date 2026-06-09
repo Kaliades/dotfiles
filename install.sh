@@ -62,6 +62,46 @@ is_stowed() {
   $found
 }
 
+# Post-install dla pakietu `claude`: dopnij `statusLine` do ~/.claude/settings.json.
+# settings.json celowo NIE jest stowowany (trzyma lokalne klucze jak model/theme),
+# więc rejestrację status line trzeba domergować idempotentnie po stow.
+claude_postinstall() {
+  local settings="$TARGET_DIR/.claude/settings.json"
+  local script="$TARGET_DIR/.claude/statusline-command.sh"
+  local statusline='{"type":"command","command":"bash ~/.claude/statusline-command.sh"}'
+
+  # Skrypt wykonywalny (przydatne też przy bezpośrednim uruchomieniu, nie tylko `bash …`)
+  [[ -e "$script" ]] && chmod +x "$(realpath "$script")" 2>/dev/null || true
+
+  if ! command -v jq &>/dev/null; then
+    warn "jq nie znaleziony — pomijam wpięcie statusLine. Dodaj ręcznie do ${BOLD}$settings${RESET}:"
+    echo "      \"statusLine\": $statusline"
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$settings")"
+  [[ -f "$settings" ]] || echo '{}' > "$settings"
+
+  if ! jq -e . "$settings" >/dev/null 2>&1; then
+    err "$settings to niepoprawny JSON — pomijam wpięcie statusLine (nie nadpisuję)."
+    return 0
+  fi
+
+  if jq -e '.statusLine' "$settings" >/dev/null 2>&1; then
+    ok "statusLine już skonfigurowany — zostawiam bez zmian."
+    return 0
+  fi
+
+  local tmp
+  tmp="$(mktemp)"
+  if jq --argjson sl "$statusline" '.statusLine = $sl' "$settings" > "$tmp" && mv "$tmp" "$settings"; then
+    ok "Wpięto statusLine do settings.json"
+  else
+    rm -f "$tmp"
+    err "Nie udało się zaktualizować settings.json"
+  fi
+}
+
 # ============================================================================
 # Komendy
 # ============================================================================
@@ -106,6 +146,8 @@ cmd_stow() {
     else
       err "$pkg — błąd podczas stow (może konflikt plików?)"
     fi
+    # Pakiet `claude` wymaga dopięcia statusLine do (niestowowanego) settings.json
+    [[ "$pkg" == "claude" ]] && claude_postinstall
   done <<< "$selected"
 }
 
