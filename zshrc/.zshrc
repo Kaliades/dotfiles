@@ -212,7 +212,9 @@ zt() {
 # liczone zawsze od GŁÓWNEGO worktree (pierwsza linia `git worktree list`),
 # więc działa spójnie niezależnie od tego, w którym worktree teraz siedzisz.
 #   wt              — fzf-picker istniejących worktree → cd
-#   wt add <branch> — utwórz worktree (nowy lub istniejący branch) → cd
+#   wt add <branch> — utwórz worktree → cd. Branch lokalny → checkout;
+#                     tylko na origin → checkout śledzący origin/<branch>;
+#                     nigdzie → nowy branch od HEAD
 #   wt rm           — fzf-picker → usuń worktree (git worktree remove)
 #   wt ls           — lista worktree
 wt() {
@@ -232,7 +234,9 @@ wt() {
       path="$wt_dir/${branch//\//-}"  # spłaszcz feature/x -> feature-x
       [[ -e "$path" ]] && { print -u2 "wt add: $path już istnieje"; return 1 }
       if git show-ref --verify --quiet "refs/heads/$branch"; then
-        git worktree add "$path" "$branch" || return $?   # istniejący branch
+        git worktree add "$path" "$branch" || return $?   # istniejący branch lokalny
+      elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+        git worktree add "$path" -b "$branch" --track "origin/$branch" || return $? # śledzi origin/<branch>
       else
         git worktree add -b "$branch" "$path" || return $? # nowy branch od HEAD
       fi
