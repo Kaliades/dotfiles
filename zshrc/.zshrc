@@ -229,18 +229,20 @@ wt() {
   cmd="${1:-}"; (( $# )) && shift
   case "$cmd" in
     add)
-      local branch="$1" path
+      # UWAGA: NIE używać zmiennej `path` — w zsh jest powiązana z $PATH
+      # (lokalny `local path` też!), przypisanie ścieżki skasowałoby PATH.
+      local branch="$1" dest
       [[ -z "$branch" ]] && { print -u2 "wt add: podaj nazwę brancha"; return 1 }
-      path="$wt_dir/${branch//\//-}"  # spłaszcz feature/x -> feature-x
-      [[ -e "$path" ]] && { print -u2 "wt add: $path już istnieje"; return 1 }
+      dest="$wt_dir/${branch//\//-}"  # spłaszcz feature/x -> feature-x
+      [[ -e "$dest" ]] && { print -u2 "wt add: $dest już istnieje"; return 1 }
       if git show-ref --verify --quiet "refs/heads/$branch"; then
-        git worktree add "$path" "$branch" || return $?   # istniejący branch lokalny
+        git worktree add "$dest" "$branch" || return $?   # istniejący branch lokalny
       elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-        git worktree add "$path" -b "$branch" --track "origin/$branch" || return $? # śledzi origin/<branch>
+        git worktree add "$dest" -b "$branch" --track "origin/$branch" || return $? # śledzi origin/<branch>
       else
-        git worktree add -b "$branch" "$path" || return $? # nowy branch od HEAD
+        git worktree add -b "$branch" "$dest" || return $? # nowy branch od HEAD
       fi
-      cd "$path"
+      cd "$dest"
       ;;
     rm|remove)
       command -v fzf >/dev/null || { print -u2 "wt: wymagany fzf"; return 1 }
