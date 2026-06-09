@@ -46,10 +46,19 @@ export NVM_DIR="$HOME/.nvm"
 
 # Eager PATH do domyślnego node — Neovim (Mason/LSP) potrzebuje node na PATH
 if [[ -f "$NVM_DIR/alias/default" ]]; then
-  _nvm_default=$(cat "$NVM_DIR/alias/default")
-  _nvm_default_path=$(ls -d "$NVM_DIR/versions/node/v${_nvm_default}"* 2>/dev/null | sort -V | tail -1)
+  _nvm_default=$(<"$NVM_DIR/alias/default")
+  # default bywa aliasem (np. „lts/*", „node") zamiast numeru wersji — wtedy
+  # spadamy do najnowszej zainstalowanej. (N) = NULL_GLOB: brak dopasowania daje
+  # pustą listę zamiast zsh-owego błędu „no matches found" (którego 2>/dev/null
+  # by NIE złapało — to błąd globa, nie polecenia).
+  if [[ "$_nvm_default" == <->* ]]; then
+    _nvm_cand=("$NVM_DIR"/versions/node/v${_nvm_default}*(N))
+  else
+    _nvm_cand=("$NVM_DIR"/versions/node/v*(N))
+  fi
+  _nvm_default_path=$(print -l "${_nvm_cand[@]}" | sort -V | tail -1)
   [[ -n "$_nvm_default_path" ]] && path=("$_nvm_default_path/bin" $path)
-  unset _nvm_default _nvm_default_path
+  unset _nvm_default _nvm_cand _nvm_default_path
 fi
 
 # Sourcing z wielu lokalizacji — pokrywa brew-mac, linuxbrew i klasyczny
