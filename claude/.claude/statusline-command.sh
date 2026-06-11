@@ -68,95 +68,48 @@ top_line="$dir_part"
 [ -n "$ctx_part" ] && top_line="${top_line}${SEP}${ctx_part}"
 [ -n "$git_part" ] && top_line="${top_line}${SEP}${git_part}"
 
-# --- Usage reset timer (5h rolling window from Anthropic API) ---
-# Cache API response for 60 seconds to avoid rate limiting
+# --- Usage limits (natywne `rate_limits` ze stdin status line'a) ---
+# Claude Code (≥ ~2.1.x) przekazuje five_hour/seven_day wprost w JSON-ie wejściowym;
+# wcześniejsze podejście (curl na api.anthropic.com/api/oauth/usage) kończyło się
+# permanentnym 429 — endpoint jest ostro rate-limitowany per IP.
 block_part=""
-CACHE_FILE="/tmp/claude-usage-cache.json"
-CACHE_MAX_AGE=180
-now_epoch=$(date +%s)
+util_5h=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+resets_5h=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty') # epoch
+util_7d=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
 
-use_cache=false
-if [ -f "$CACHE_FILE" ]; then
-  # stat: -c %Y (GNU/Linux) first, then -f %m (BSD/macOS). GNU must come first:
-  # `stat -f` on GNU means --file-system and exits 0, so a BSD-first order never
-  # falls through and mtime ends up as the filesystem-info block, not an epoch.
-  mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)
-  cache_age=$((now_epoch - mtime))
-  if [ "$cache_age" -lt "$CACHE_MAX_AGE" ]; then
-    use_cache=true
-  fi
-fi
-
-if [ "$use_cache" = true ]; then
-  usage_json=$(cat "$CACHE_FILE")
-else
-  # Token OAuth — warstwowo, przenośnie:
-  #   1) $CLAUDE_CODE_OAUTH_TOKEN (uniwersalny override, działa też pod SSH)
-  #   2) macOS Keychain
-  #   3) Linux: ~/.claude/.credentials.json (ten sam JSON co w Keychainie)
-  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-    TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"
-  elif [ "$(uname)" = "Darwin" ]; then
-    TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null |
-      python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" 2>/dev/null)
+if [ -n "$util_5h" ] && [ -n "$resets_5h" ]; then
+  util_int=$(printf "%.0f" "$util_5h")
+  now_epoch=$(date +%s)
+  diff=$((resets_5h - now_epoch))
+  [ "$diff" -lt 0 ] && diff=0
+  total_min=$((diff / 60))
+  h=$((total_min / 60))
+  m=$((total_min % 60))
+  if [ "$h" -gt 0 ]; then
+    reset_remaining=$(printf '%dh%02dm' "$h" "$m")
   else
-    TOKEN=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" \
-      < "$HOME/.claude/.credentials.json" 2>/dev/null)
+    reset_remaining="${m}m"
   fi
-  if [ -n "$TOKEN" ]; then
-    usage_json=$(curl -s --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
-      -H "Authorization: Bearer $TOKEN" \
-      -H "anthropic-beta: oauth-2025-04-20" 2>/dev/null)
-    # Only cache valid responses (not errors)
-    if echo "$usage_json" | jq -e '.five_hour' >/dev/null 2>&1; then
-      echo "$usage_json" >"$CACHE_FILE"
-    elif [ -f "$CACHE_FILE" ]; then
-      # Fall back to stale cache on error
-      usage_json=$(cat "$CACHE_FILE")
-    fi
+  reset_time=$(date -d "@$resets_5h" +%H:%M 2>/dev/null || date -r "$resets_5h" +%H:%M 2>/dev/null)
+  reset_str="${reset_time:-"--:--"} (${reset_remaining})"
+  # Color based on utilization
+  if [ "$util_int" -ge 80 ]; then
+    usage_color="$RED"
+  elif [ "$util_int" -ge 50 ]; then
+    usage_color="$ORANGE"
+  else
+    usage_color="$GREEN"
+  fi
+  block_part="${PURPLE}${BOLD}󱑎 ${RESET}${PURPLE}${reset_str}${RESET}${SEP}${usage_color}${util_int}% used${RESET}"
+  if [ -n "$util_7d" ]; then
+    util_7d_int=$(printf "%.0f" "$util_7d")
+    block_part="${block_part}${SEP}${GRAY}7d ${util_7d_int}%${RESET}"
   fi
 fi
 
-if [ -n "$usage_json" ]; then
-  util=$(echo "$usage_json" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
-  resets_at=$(echo "$usage_json" | jq -r '.five_hour.resets_at // empty' 2>/dev/null)
-  if [ -n "$util" ] && [ -n "$resets_at" ]; then
-    util_int=$(echo "$util" | awk '{printf "%.0f", $1}')
-    # Calculate time until reset (proper timezone handling)
-    reset_info=$(python3 -c "
-from datetime import datetime
-try:
-    dt = datetime.fromisoformat('$resets_at')
-    local = dt.astimezone()
-    now = datetime.now().astimezone()
-    diff = dt - now
-    total_min = max(0, int(diff.total_seconds()) // 60)
-    h, m = divmod(total_min, 60)
-    if h > 0:
-        remaining = f'{h}h{m:02d}m'
-    else:
-        remaining = f'{m}m'
-    print(f'{local.strftime(\"%H:%M\")}|{remaining}')
-except:
-    print('')
-" 2>/dev/null)
-    if [ -n "$reset_info" ]; then
-      reset_time="${reset_info%%|*}"
-      reset_remaining="${reset_info##*|}"
-      reset_str="${reset_time} (${reset_remaining})"
-    else
-      reset_str="--:--"
-    fi
-    # Color based on utilization
-    if [ "$util_int" -ge 80 ]; then
-      usage_color="$RED"
-    elif [ "$util_int" -ge 50 ]; then
-      usage_color="$ORANGE"
-    else
-      usage_color="$GREEN"
-    fi
-    block_part="${PURPLE}${BOLD}󱑎 ${RESET}${PURPLE}${reset_str}${RESET}${SEP}${usage_color}${util_int}% used${RESET}"
-  fi
+# Starsza wersja Claude Code bez rate_limits w stdin — powiedz to wprost.
+if [ -z "$block_part" ]; then
+  block_part="${GRAY}󱑎 brak danych o limicie${RESET}"
 fi
 
 # --- Output ---
