@@ -273,6 +273,18 @@ export ENABLE_LSP_TOOL=1
 export XDG_CONFIG_HOME="$HOME/.config"
 export BAT_THEME="Catppuccin Mocha"
 
+# SSH agent + tmux (tylko sesje zdalne — na macOS launchd ogarnia agenta sam):
+# stabilna ścieżka do forwardowanego socketu agenta, żeby shelle w długo żyjącej
+# sesji tmux przeżywały reconnect (SSH_AUTH_SOCK zmienia się przy każdym logowaniu).
+# Świeży login ma żywy socket → odświeża symlink; shell w tmuxie ma martwą starą
+# wartość → warunek nie przechodzi i tylko przestawia się na symlink.
+if [[ -n "$SSH_CONNECTION" ]]; then
+  if [[ -n "$SSH_AUTH_SOCK" && -S "$SSH_AUTH_SOCK" && "$SSH_AUTH_SOCK" != "$HOME/.ssh/ssh_auth_sock" ]]; then
+    ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/ssh_auth_sock"
+  fi
+  export SSH_AUTH_SOCK="$HOME/.ssh/ssh_auth_sock"
+fi
+
 # Sekrety (upewnij się: chmod 600 ~/.secrets)
 [[ -f ~/.secrets ]] && source ~/.secrets
 
