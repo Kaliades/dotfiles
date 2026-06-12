@@ -3,4 +3,4 @@ gui:
 git:
   pagers:
     - colorArg: always
-      pager: delta --paging=never --no-gitconfig --syntax-theme="Catppuccin Mocha" --navigate --hunk-header-style=omit --hyperlinks --true-color=always
+      pager: delta --paging=never --no-gitconfig --syntax-theme="${BAT_THEME:-Catppuccin Mocha}" --navigate --hunk-header-style=omit --hyperlinks --true-color=always

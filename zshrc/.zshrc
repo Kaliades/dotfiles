@@ -271,7 +271,13 @@ wt() {
 # ============================================================================
 export ENABLE_LSP_TOOL=1
 export XDG_CONFIG_HOME="$HOME/.config"
-export BAT_THEME="Catppuccin Mocha"
+# bat (i delta — dziedziczy BAT_THEME, bo .gitconfig nie ustawia syntax-theme) za
+# przełącznikiem `theme`. Wartość trzyma lokalny plik ~/.config/theme-bat (poza repo);
+# odświeżamy co prompt (precmd), więc po `theme` następne bat/fzf-preview/git diff łapią motyw.
+_theme_bat() { cat ~/.config/theme-bat 2>/dev/null || echo "Catppuccin Mocha"; }
+_theme_refresh_bat() { export BAT_THEME="$(_theme_bat)"; }
+_theme_refresh_bat
+autoload -Uz add-zsh-hook && add-zsh-hook precmd _theme_refresh_bat
 
 # SSH agent + tmux (tylko sesje zdalne — na macOS launchd ogarnia agenta sam):
 # stabilna ścieżka do forwardowanego socketu agenta, żeby shelle w długo żyjącej
@@ -288,7 +294,12 @@ fi
 # Sekrety (upewnij się: chmod 600 ~/.secrets)
 [[ -f ~/.secrets ]] && source ~/.secrets
 
-# Prompt — Starship (cross-shell, config w ~/.config/starship.toml)
+# Prompt — Starship (cross-shell). Config przekierowany na lokalny, generowany plik
+# (~/.cache/starship-active.toml), żeby skrypt `theme` mógł przełączać paletę
+# (gruvbox_dark ⇄ catppuccin_mocha) BEZ churnu w gicie. Stowowany ~/.config/starship.toml
+# jest szablonem; gdy brak aktywnego pliku (świeży shell/maszyna) — seedujemy go domyślną paletą.
+export STARSHIP_CONFIG="${XDG_CACHE_HOME:-$HOME/.cache}/starship-active.toml"
+[[ -f $STARSHIP_CONFIG ]] || { mkdir -p "${STARSHIP_CONFIG:h}" && cp ~/.config/starship.toml "$STARSHIP_CONFIG" 2>/dev/null }
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 ## custom
 [[ ! -f "$HOME/.custom" ]] || source "$HOME/.custom"

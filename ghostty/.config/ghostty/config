@@ -12,10 +12,15 @@ window-padding-y = 10
 window-padding-balance = true
 window-padding-color = extend
 
-# Motyw kolorystyczny
+# Motyw kolorystyczny — default + opcjonalny lokalny override (per-urządzenie, NIE w repo).
+# BEZ ruszania trybu jasny/ciemny macOS. Plik ~/.config/ghostty-theme.local leży POZA
+# symlinkowanym katalogiem stow, więc nie trafia do gita; gdy istnieje, nadpisuje theme.
+# Zapisuje go skrypt `theme` (~/.local/bin/theme), który ręcznie przełącza terminal + nvim.
+# Brak pliku (np. świeża maszyna) → zostaje default poniżej. '?' = include opcjonalny.
 theme = Catppuccin Mocha
+config-file = ?~/.config/ghostty-theme.local
 shell-integration-features = no-cursor
-confirm-close-surface = false
+# confirm-close-surface = false
 keybind = shift+enter=text:\x1b\r
 window-save-state = never
 
@@ -24,7 +29,7 @@ window-save-state = never
 # (w przeciwieństwie do window-decoration = none, które robi goły prostokąt).
 # Wymaga window-decoration != none, więc zostawiamy auto.
 window-decoration = auto
-macos-titlebar-style = hidden
+# macos-titlebar-style = hidden
 
 # Żeby skróty klawiszowe (np. Alt/Option) działały poprawnie w Tmuxie
 macos-option-as-alt = true

@@ -24,8 +24,9 @@
 	diffFilter = delta --color-only
 
 [delta]
-	# Główny motyw (cały stack na Catppuccin Mocha)
-	syntax-theme = Catppuccin Mocha
+	# Motyw składni: BRAK jawnego syntax-theme → delta dziedziczy $BAT_THEME,
+	# który przełącza skrypt `theme` (gruvbox-dark ⇄ Catppuccin Mocha). Dzięki temu
+	# diffy gita chodzą za tym samym przełącznikiem co reszta. Fallback bez env = default delty.
 
 	# Wygląd
 	line-numbers = true
