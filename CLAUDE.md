@@ -19,13 +19,18 @@ Each tool gets its own top-level directory mirroring the home directory layout:
 - `aerospace/` — AeroSpace tiling window manager config (`.aerospace.toml`)
 - `starship/` — Starship prompt (`.config/starship.toml`) — **jedyny prompt** (cross-shell, Catppuccin Powerline preset)
 - `karabiner/` — Karabiner-Elements config (`.config/karabiner/karabiner.json`) — `automatic_backups/` i `assets/` są ignorowane (Karabiner regeneruje je sam)
+- `bin/` — skrypty użytkownika (`.local/bin/`) — m.in. `theme` (przełącznik motywu dzień/noc, patrz Key Details)
 
 New tools should follow the same pattern: `<tool-name>/` containing files in their home-relative paths.
 
 ## Key Details
 
 - **Language**: Comments and descriptions in Polish
-- **Theme**: cały stack na Catppuccin Mocha (Ghostty / Zellij / Starship / nvim / Yazi / bat / delta). `BAT_THEME` i delta `syntax-theme` = `Catppuccin Mocha` (motyw wbudowany w bat ≥0.26, więc bez doinstalowania)
+- **Theme — przełącznik dzień/noc** (`bin/.local/bin/theme`): jeden skrypt przełącza **day = Gruvbox Dark Hard ⇄ night = Catppuccin Mocha** w całym stacku (Ghostty / nvim / Starship / Zellij / bat / delta), BEZ ruszania trybu jasny/ciemny macOS. Użycie: `theme [day|night|toggle|status]`. **Mechanizm = dyrygent + dyrygowani:**
+  - **Dyrygent** = skrypt `theme` (stowowany pakiet `bin/`, w PATH). Zapisuje 3 pliki stanu **POZA repo** (per-urządzenie, zero churnu w gicie): `~/.config/theme-mode` (nvim), `~/.config/ghostty-theme.local` (Ghostty), `~/.config/theme-bat` (bat/delta) + regeneruje `~/.cache/starship-active.toml`. Potem szturcha apki: `zellij action set-*-theme` (żywa sesja), Ghostty reload (osascript Cmd+Shift+,)
+  - **Dyrygowani** = wiring w trackowanych configach (nie zmienia się przy toggle): `ghostty/config` (default + `config-file = ?~/.config/ghostty-theme.local`); `nvim` watcher pliku `theme-mode` (VimEnter + poll 2 s) + plugin `gruvbox.nvim` `contrast=hard`; `starship.toml` paleta `gruvbox_dark` (te same nazwy kluczy co catppuccin) + `STARSHIP_CONFIG` przekierowany na lokalny plik; `zellij/config.kdl` sloty `theme_dark`/`theme_light` (gruvbox-dark/catppuccin-mocha wbudowane); `.zshrc` `BAT_THEME` z `~/.config/theme-bat` odświeżane co prompt (precmd); `.gitconfig` BEZ jawnego `syntax-theme` → delta dziedziczy `BAT_THEME` (lazygit analogicznie, `--no-gitconfig`)
+  - fzf/eza/grep/git itd. dziedziczą paletę ANSI Ghostty → przełączają się **za darmo**, bez wiringu
+  - **Świeża maszyna**: po `stow` wszystko działa od ręki (dyrygent jedzie z `bin/`); brak plików stanu = każde narzędzie spada na swój default (Catppuccin), `theme day` ustawia resztę
 - **Git pager**: delta with side-by-side, Catppuccin Mocha syntax theme — Lazygit overrides delta to use `--no-gitconfig` with matching flags
 - **Git — split tożsamości (3 warstwy)**: `.gitconfig` trzyma wspólne ustawienia (delta, merge, rerere, diff) + **domyślną tożsamość prywatną** (gmail). Dwie nakładki:
   - `~/.gitconfig-work` (stowowany, **trackowany**) — tożsamość firmowa (getprintbox). Ładowany przez `[includeIf "hasconfig:remote.*.url:git@git.getprintbox.com:*/**"]`, czyli **po hoście remote'a**, nie po katalogu (`~/Workspace` jest mieszane). Glob: `**` musi być otoczone slashem (`:*/**`) żeby przeszło przez `/` w `grupa/repo.git` — bez slasha git traktuje `**` jak zwykłe `*` i match nie zadziała. Trackowany = jedzie na każdy komp, firmowy email „za darmo" po `stow`
