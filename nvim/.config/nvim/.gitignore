@@ -6,4 +6,5 @@ debug
 foo.*
 *.log
 data
-lazy-lock.json
+# lazy-lock.json — trzymany w repo świadomie, żeby reprodukowalnie pinować
+# wersje pluginów (LazyVim domyślnie ignoruje, bo zakłada single-machine setup)
