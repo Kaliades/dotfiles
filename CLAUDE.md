@@ -23,6 +23,8 @@ Each tool gets its own top-level directory mirroring the home directory layout:
 
 New tools should follow the same pattern: `<tool-name>/` containing files in their home-relative paths.
 
+**Wyjątek poza stow** — `raycast.rayconfig` (plik w korzeniu repo): eksport ustawień Raycast (binarny). NIE jest stowowany (to jednorazowy import/eksport, nie żywy config) — leży jako plik w korzeniu, więc `install.sh` (szuka tylko katalogów) nie pokaże go w pickerze. Import ręczny: Raycast → Settings → Advanced → Import. Aktualizacja: re-eksport i podmiana pliku.
+
 ## Key Details
 
 - **Language**: Comments and descriptions in Polish
