@@ -18,6 +18,8 @@ brew "gh"
 brew "git-delta"
 # Render markdown on the CLI
 brew "glow"
+# Lightweight and flexible command-line JSON processor
+brew "jq"
 # Simple terminal UI for git commands
 brew "lazygit"
 # Ambitious Vim-fork focused on extensibility and agility
@@ -26,6 +28,8 @@ brew "neovim"
 brew "nvm"
 # Python version management
 brew "pyenv"
+# Cross-shell prompt for astronauts
+brew "starship"
 # Organize software neatly under a single directory tree (e.g. /usr/local)
 brew "stow"
 # Postgres development platform
