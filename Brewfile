@@ -1,7 +1,7 @@
-tap "nikitabobko/tap"
-tap "oven-sh/bun"
-tap "shopify/shopify"
-tap "supabase/tap"
+tap "nikitabobko/tap", trusted: true
+tap "oven-sh/bun", trusted: true
+tap "shopify/shopify", trusted: true
+tap "supabase/tap", trusted: true
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
 # General-purpose scripting language
