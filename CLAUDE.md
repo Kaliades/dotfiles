@@ -25,6 +25,8 @@ New tools should follow the same pattern: `<tool-name>/` containing files in the
 
 **Wyjątek poza stow** — `raycast.rayconfig` (plik w korzeniu repo): eksport ustawień Raycast (binarny). NIE jest stowowany (to jednorazowy import/eksport, nie żywy config) — leży jako plik w korzeniu, więc `install.sh` (szuka tylko katalogów) nie pokaże go w pickerze. Import ręczny: Raycast → Settings → Advanced → Import. Aktualizacja: re-eksport i podmiana pliku.
 
+**Wyjątek poza stow** — `macos.sh` (plik w korzeniu repo): ustawienia systemowe macOS przez `defaults` (Dock, Finder, wygląd). macOS trzyma je w bazie `defaults`, nie w plikach tekstowych — więc to skrypt do odpalenia, nie config do symlinkowania (plik w korzeniu = poza pickerem stow). Odpalanie: `./install.sh macos`. Dwie sekcje: WIERNE (zrzut z maca) + QoL (zakomentowane dodatki). Aktualizacja: dopisz `defaults write …` po odczytaniu wartości `defaults read <domain> <key>`.
+
 ## Key Details
 
 - **Language**: Comments and descriptions in Polish

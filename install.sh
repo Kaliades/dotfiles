@@ -166,6 +166,22 @@ cmd_setup() {
   info "Git per-urządzenie: skopiuj ${BOLD}git/.gitconfig.local.example${RESET} → ${BOLD}~/.gitconfig.local${RESET}."
 }
 
+# Ustawienia systemowe macOS przez `defaults` (Dock, Finder, wygląd…).
+# Delegacja do macos.sh — patrz tam po szczegóły i sekcję QoL do podrasowania.
+cmd_macos() {
+  if [[ "$(uname)" != "Darwin" ]]; then
+    err "macos jest tylko dla macOS (wykryto: $(uname))."
+    exit 1
+  fi
+  if [[ ! -f "$DOTFILES_DIR/macos.sh" ]]; then
+    err "Brak $DOTFILES_DIR/macos.sh"
+    exit 1
+  fi
+  info "Stosuję ustawienia macOS (defaults)…"
+  bash "$DOTFILES_DIR/macos.sh"
+  ok "Ustawienia macOS zastosowane."
+}
+
 cmd_stow() {
   check_dep stow
   check_dep fzf
@@ -279,6 +295,7 @@ cmd_help() {
   echo -e "Użycie: ${CYAN}./install.sh <komenda>${RESET}\n"
   echo -e "Komendy:"
   echo -e "  ${BOLD}setup${RESET}     Bootstrap świeżego Maca (Homebrew + Brewfile + Oh My Zsh)"
+  echo -e "  ${BOLD}macos${RESET}     Zastosuj ustawienia systemowe macOS (Dock, Finder, wygląd)"
   echo -e "  ${BOLD}stow${RESET}      Zainstaluj wybrane pakiety (symlinki do \$HOME)"
   echo -e "  ${BOLD}unstow${RESET}    Odinstaluj wybrane pakiety"
   echo -e "  ${BOLD}status${RESET}    Pokaż status wszystkich pakietów"
@@ -290,6 +307,7 @@ cmd_help() {
 # ============================================================================
 case "${1:-help}" in
   setup)   cmd_setup ;;
+  macos)   cmd_macos ;;
   stow)    cmd_stow ;;
   unstow)  cmd_unstow ;;
   status)  cmd_status ;;
