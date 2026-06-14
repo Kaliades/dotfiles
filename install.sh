@@ -160,6 +160,27 @@ cmd_setup() {
     ok "Oh My Zsh zainstalowany."
   fi
 
+  # 4b. Zewnętrzne pluginy OMZ (git, extract, sudo są wbudowane — te dwa nie).
+  #     .zshrc je włącza w plugins=(...), ale OMZ ich sam nie klonuje.
+  local zsh_custom="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+  declare -a omz_plugins=(
+    "zsh-autosuggestions|https://github.com/zsh-users/zsh-autosuggestions"
+    "zsh-syntax-highlighting|https://github.com/zsh-users/zsh-syntax-highlighting"
+  )
+  for entry in "${omz_plugins[@]}"; do
+    local name="${entry%%|*}" url="${entry##*|}"
+    if [[ -d "$zsh_custom/plugins/$name" ]]; then
+      ok "Plugin $name już sklonowany."
+    else
+      info "Klonuję plugin $name…"
+      if git clone --depth=1 "$url" "$zsh_custom/plugins/$name"; then
+        ok "$name sklonowany."
+      else
+        warn "Nie udało się sklonować $name — doklonuj ręcznie później."
+      fi
+    fi
+  done
+
   echo ""
   ok "Bootstrap gotowy."
   info "Następny krok: ${BOLD}./install.sh stow${RESET} (symlinki configów do \$HOME)."
