@@ -105,6 +105,67 @@ claude_postinstall() {
 # ============================================================================
 # Komendy
 # ============================================================================
+
+# Bootstrap świeżego Maca: Xcode CLT → Homebrew → brew bundle (Brewfile) → Oh My Zsh.
+# Każdy krok idempotentny (sprawdza czy już zainstalowane), więc można puszczać wielokrotnie.
+# Po nim: ./install.sh stow (symlinki configów).
+cmd_setup() {
+  if [[ "$(uname)" != "Darwin" ]]; then
+    err "setup jest tylko dla macOS (wykryto: $(uname))."
+    exit 1
+  fi
+
+  # 1. Xcode Command Line Tools — wymagane przez Homebrew (git, kompilatory)
+  if ! xcode-select -p &>/dev/null; then
+    info "Instaluję Xcode Command Line Tools…"
+    xcode-select --install || true
+    warn "Dokończ instalację CLT w oknie GUI, potem uruchom ${BOLD}./install.sh setup${RESET} ponownie."
+    exit 0
+  else
+    ok "Xcode Command Line Tools już zainstalowane."
+  fi
+
+  # 2. Homebrew
+  if ! command -v brew &>/dev/null; then
+    info "Instaluję Homebrew…"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Apple Silicon: /opt/homebrew, Intel: /usr/local — załaduj brew do bieżącej sesji
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+      eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -x /usr/local/bin/brew ]]; then
+      eval "$(/usr/local/bin/brew shellenv)"
+    fi
+    ok "Homebrew zainstalowany."
+  else
+    ok "Homebrew już zainstalowany."
+  fi
+
+  # 3. brew bundle — wszystkie pakiety/caski/npm z Brewfile
+  if [[ -f "$DOTFILES_DIR/Brewfile" ]]; then
+    info "Instaluję pakiety z Brewfile (brew bundle)…"
+    brew bundle --file="$DOTFILES_DIR/Brewfile"
+    ok "Pakiety z Brewfile zainstalowane."
+  else
+    warn "Brak $DOTFILES_DIR/Brewfile — pomijam brew bundle."
+  fi
+
+  # 4. Oh My Zsh — bez auto-chsh i bez odpalania nowego shella w trakcie skryptu;
+  #    KEEP_ZSHRC=yes żeby nie nadpisać .zshrc (i tak podmienia go potem `stow zshrc`)
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    ok "Oh My Zsh już zainstalowany."
+  else
+    info "Instaluję Oh My Zsh…"
+    RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    ok "Oh My Zsh zainstalowany."
+  fi
+
+  echo ""
+  ok "Bootstrap gotowy."
+  info "Następny krok: ${BOLD}./install.sh stow${RESET} (symlinki configów do \$HOME)."
+  info "Git per-urządzenie: skopiuj ${BOLD}git/.gitconfig.local.example${RESET} → ${BOLD}~/.gitconfig.local${RESET}."
+}
+
 cmd_stow() {
   check_dep stow
   check_dep fzf
@@ -217,6 +278,7 @@ cmd_help() {
   echo -e "${BOLD}dotfiles install${RESET} — zarządzanie konfiguracją przez GNU Stow\n"
   echo -e "Użycie: ${CYAN}./install.sh <komenda>${RESET}\n"
   echo -e "Komendy:"
+  echo -e "  ${BOLD}setup${RESET}     Bootstrap świeżego Maca (Homebrew + Brewfile + Oh My Zsh)"
   echo -e "  ${BOLD}stow${RESET}      Zainstaluj wybrane pakiety (symlinki do \$HOME)"
   echo -e "  ${BOLD}unstow${RESET}    Odinstaluj wybrane pakiety"
   echo -e "  ${BOLD}status${RESET}    Pokaż status wszystkich pakietów"
@@ -227,6 +289,7 @@ cmd_help() {
 # Main
 # ============================================================================
 case "${1:-help}" in
+  setup)   cmd_setup ;;
   stow)    cmd_stow ;;
   unstow)  cmd_unstow ;;
   status)  cmd_status ;;
