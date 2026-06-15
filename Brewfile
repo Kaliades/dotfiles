@@ -18,8 +18,6 @@ brew "gh"
 brew "git-delta"
 # Render markdown on the CLI
 brew "glow"
-# Lightweight and flexible command-line JSON processor
-brew "jq"
 # Simple terminal UI for git commands
 brew "lazygit"
 # Ambitious Vim-fork focused on extensibility and agility
@@ -28,16 +26,22 @@ brew "neovim"
 brew "nvm"
 # Python version management
 brew "pyenv"
-# Cross-shell prompt for astronauts
-brew "starship"
 # Organize software neatly under a single directory tree (e.g. /usr/local)
 brew "stow"
 # Postgres development platform
 brew "supabase"
+# Easiest, most secure way to use WireGuard and 2FA
+brew "tailscale"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Pluggable terminal workspace, with terminal multiplexer as the base feature
 brew "zellij"
+# Incredibly fast JavaScript runtime, bundler, transpiler and package manager - all in one.
+brew "oven-sh/bun/bun"
+# A CLI tool to build for the Shopify platform
+brew "shopify/shopify/shopify-cli"
+# Password manager that keeps all passwords secure behind one password
+cask "1password"
 # AeroSpace is an i3-like tiling window manager for macOS
 cask "nikitabobko/tap/aerospace"
 # Anthropic's official Claude AI desktop app
