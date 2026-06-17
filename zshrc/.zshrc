@@ -279,6 +279,23 @@ _theme_refresh_bat() { export BAT_THEME="$(_theme_bat)"; }
 _theme_refresh_bat
 autoload -Uz add-zsh-hook && add-zsh-hook precmd _theme_refresh_bat
 
+# Zellij — synchronizuj motyw przy starcie każdego nowego pane/sesji.
+# Bez tego nowy pane zawsze startuje z domyślnym catppuccin-mocha (theme= w config.kdl),
+# ignorując stan ustawiony przez `theme`. Każdy nowy shell w Zelliju sourci .zshrc →
+# ten blok odpala raz i ustawia właściwy slot (set-light-theme=gruvbox / set-dark-theme=catppuccin).
+if [[ -n "${ZELLIJ:-}" ]] && command -v zellij >/dev/null 2>&1; then
+  _zellij_sync_theme() {
+    local mode; mode="$(cat ~/.config/theme-mode 2>/dev/null)"
+    if [[ "$mode" == "gruvbox" ]]; then
+      zellij action set-light-theme 2>/dev/null || true
+    else
+      zellij action set-dark-theme 2>/dev/null || true
+    fi
+  }
+  _zellij_sync_theme
+  unfunction _zellij_sync_theme
+fi
+
 # SSH agent + tmux (tylko sesje zdalne — na macOS launchd ogarnia agenta sam):
 # stabilna ścieżka do forwardowanego socketu agenta, żeby shelle w długo żyjącej
 # sesji tmux przeżywały reconnect (SSH_AUTH_SOCK zmienia się przy każdym logowaniu).
