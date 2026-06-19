@@ -83,7 +83,8 @@
                         "vendor_id": 13364
                     },
                     "ignore": false,
-                    "ignore_vendor_events": true
+                    "ignore_vendor_events": true,
+                    "manipulate_caps_lock_led": false
                 },
                 {
                     "identifiers": {
@@ -92,6 +93,14 @@
                         "vendor_id": 13364
                     },
                     "ignore_vendor_events": true
+                },
+                {
+                    "identifiers": {
+                        "is_pointing_device": true,
+                        "product_id": 53297,
+                        "vendor_id": 13364
+                    },
+                    "ignore": false
                 }
             ],
             "name": "Default profile",
