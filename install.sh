@@ -155,9 +155,17 @@ cmd_setup() {
     ok "Oh My Zsh już zainstalowany."
   else
     info "Instaluję Oh My Zsh…"
+    # `|| true`: instalator OMZ pod RUNZSH=no potrafi zwrócić niezerowy kod
+    # (pomija końcowe `exec zsh`), co przy `set -e` ubiłoby skrypt PRZED krokiem
+    # 4b (klonowanie pluginów). Realny stan i tak weryfikujemy poniżej.
     RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
-      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-    ok "Oh My Zsh zainstalowany."
+      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
+    if [[ -d "$HOME/.oh-my-zsh" ]]; then
+      ok "Oh My Zsh zainstalowany."
+    else
+      err "Instalacja Oh My Zsh nie powiodła się — pomijam pluginy. Sprawdź sieć i odpal ${BOLD}./install.sh setup${RESET} ponownie."
+      return 1
+    fi
   fi
 
   # 4b. Zewnętrzne pluginy OMZ (git, extract, sudo są wbudowane — te dwa nie).
