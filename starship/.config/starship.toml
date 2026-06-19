@@ -1,5 +1,10 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
+# Limit dla zewnętrznych komend (ms). Domyślne 500 ms bywa za krótkie dla
+# `node --version` spod NVM-a (cold start binarki) → warn "command timed out"
+# i znikający segment $nodejs. 2000 ms daje zapas bez zauważalnego laga prompta.
+command_timeout = 2000
+
 format = """
 [](red)\
 $os\
