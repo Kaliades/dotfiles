@@ -6,5 +6,8 @@ debug
 foo.*
 *.log
 data
-# lazy-lock.json — trzymany w repo świadomie, żeby reprodukowalnie pinować
-# wersje pluginów (LazyVim domyślnie ignoruje, bo zakłada single-machine setup)
+# lazy-lock.json — NIE w repo. Przy 3 maszynach trackowanie locka generuje
+# ciągłe konflikty (każda robi :Lazy update w innym momencie → inny lock).
+# Każda maszyna zarządza wersjami pluginów lokalnie. Koszt: maszyny mogą
+# dryfować do różnych wersji (świadomy trade-off za zero churnu w gicie).
+lazy-lock.json
