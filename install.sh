@@ -239,6 +239,12 @@ cmd_stow() {
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
     info "Stow: ${BOLD}$pkg${RESET}"
+    # `claude`: wymuś realny ~/.claude PRZED stow. Bez tego (świeży komp, gdy
+    # katalog nie istnieje) stow zrobiłby fold — podlinkowałby CAŁY ~/.claude na
+    # repo, a Claude Code zacząłby pisać runtime (sessions/cache/projects/…) do
+    # repo. Realny katalog zmusza stow do linkowania per-plik (tylko hooks/ +
+    # statusline-command.sh), runtime zostaje poza repo.
+    [[ "$pkg" == "claude" ]] && mkdir -p "$TARGET_DIR/.claude"
     if stow -v -d "$DOTFILES_DIR" -t "$TARGET_DIR" "$pkg" 2>&1; then
       ok "$pkg zainstalowany"
     else
