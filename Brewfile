@@ -10,6 +10,8 @@ brew "php"
 brew "composer"
 # Modern, maintained replacement for ls
 brew "eza"
+# Simple, fast and user-friendly alternative to find
+brew "fd"
 # Command-line fuzzy finder written in Go
 brew "fzf"
 # GitHub command-line tool
@@ -28,6 +30,8 @@ brew "neovim"
 brew "nvm"
 # Python version management
 brew "pyenv"
+# Search tool like grep and The Silver Searcher
+brew "ripgrep"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Organize software neatly under a single directory tree (e.g. /usr/local)
