@@ -8,6 +8,8 @@ brew "bat"
 brew "php"
 # Dependency Manager for PHP
 brew "composer"
+# Reference implementation for the Development Containers specification
+brew "devcontainer"
 # Modern, maintained replacement for ls
 brew "eza"
 # Simple, fast and user-friendly alternative to find
@@ -73,6 +75,8 @@ cask "monitorcontrol"
 cask "mos"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
+# Replacement for Docker Desktop
+cask "orbstack"
 # Collaboration platform for API development
 cask "postman"
 # Control your tools with a few keystrokes
