@@ -1,7 +1,9 @@
 -- Motyw nvim: ręczny, lokalny przełącznik spójny z Ghostty — BEZ trybu jasny/ciemny macOS.
 --
 -- Stan trzyma plik ~/.config/theme-mode (POZA repo — per-urządzenie, nie leci do gita)
--- z nazwą colorscheme, np. "gruvbox" albo "catppuccin-mocha". Zmienia go skrypt
+-- z nazwą colorscheme: "gruvbox", "gruvbox-light" albo "catppuccin-mocha" ("gruvbox-light"
+-- to umowna nazwa = plugin gruvbox + background=light; gruvbox.nvim nie ma osobnego
+-- colorscheme'u dla wariantu jasnego). Zmienia go skrypt
 -- ~/.local/bin/theme, który równolegle przepisuje ~/.config/ghostty-theme.local i
 -- przeładowuje Ghostty. nvim czyta plik na starcie (VimEnter, po LazyVim) i pollinguje
 -- co 2 s, więc otwarte instancje przełączają się same po odpaleniu skryptu.
@@ -28,7 +30,14 @@ local function start_watch()
     if s == current then
       return
     end
-    if pcall(vim.cmd.colorscheme, s) then
+    -- "gruvbox-light" → background=light + colorscheme gruvbox; reszta zawsze dark
+    -- (background PRZED colorscheme, żeby motyw wstał od razu w dobrym wariancie)
+    local scheme, bg = s, "dark"
+    if s == "gruvbox-light" then
+      scheme, bg = "gruvbox", "light"
+    end
+    vim.o.background = bg
+    if pcall(vim.cmd.colorscheme, scheme) then
       current = s
     end
   end

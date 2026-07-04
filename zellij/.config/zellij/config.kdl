@@ -188,9 +188,10 @@ keybinds clear-defaults=true {
         }
         bind "Alt w" { CloseFocus; }
         // Floating cheat-sheet z bindami (compact-bar nie pokazuje hintów per tryb).
-        // bat renderuje markdown z motywem Catppuccin Mocha. q żeby zamknąć.
+        // bat renderuje markdown; motyw z ~/.config/theme-bat (stan skryptu `theme`),
+        // fallback Catppuccin Mocha na świeżej maszynie. q żeby zamknąć.
         bind "Alt Shift /" {
-            Run "sh" "-c" "PATH=\"/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH\" exec bat --style=plain --paging=always --theme='Catppuccin Mocha' \"$HOME/.config/zellij/cheatsheet.md\"" {
+            Run "sh" "-c" "PATH=\"/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH\" exec bat --style=plain --paging=always --theme=\"$(cat \"$HOME/.config/theme-bat\" 2>/dev/null || echo 'Catppuccin Mocha')\" \"$HOME/.config/zellij/cheatsheet.md\"" {
                 floating true
                 close_on_exit true
                 name "cheatsheet"
@@ -333,12 +334,13 @@ web_client {
 theme "catppuccin-mocha"
  
 // Sloty motywów przełączane RĘCZNIE przez skrypt `theme` (akcje set-dark-theme /
-// set-light-theme). Mapowanie hijackuje semantykę dark/light: oba są ciemne, tryb
-// macOS NIE jest ruszany — to tylko dwa sloty, które przełącza `zellij action`.
-//   night → theme_dark (catppuccin-mocha),  day → theme_light (gruvbox-dark)
-// Oba wbudowane w Zellij. `theme` poniżej (catppuccin-mocha) = default dla nowej sesji.
+// set-light-theme). Tryb macOS NIE jest ruszany — to tylko dwa sloty `zellij action`.
+// Motywy w stacku są TRZY (day/night/light), a sloty dwa, więc:
+//   light → theme_light (gruvbox-light — jasny pasek tabów w słońcu)
+//   day + night → theme_dark (catppuccin-mocha; ramka w day catppuccinowa — kompromis)
+// Oba wbudowane w Zellij. `theme` powyżej (catppuccin-mocha) = default dla nowej sesji.
 theme_dark "catppuccin-mocha"
-theme_light "gruvbox-dark"
+theme_light "gruvbox-light"
  
 // Choose the base input mode of zellij.
 // Default: normal

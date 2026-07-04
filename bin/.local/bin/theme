@@ -2,12 +2,15 @@
 # theme — lokalny przełącznik motywu Ghostty + nvim, BEZ ruszania trybu jasny/ciemny macOS.
 #
 # Stan (per-urządzenie, POZA dotfiles/gitem):
-#   ~/.config/theme-mode           → nazwa colorscheme dla nvim (gruvbox / catppuccin-mocha)
+#   ~/.config/theme-mode           → nazwa colorscheme dla nvim (gruvbox / gruvbox-light / catppuccin-mocha)
 #   ~/.config/ghostty-theme.local  → 'theme = ...' include'owane opcjonalnie przez config Ghostty
 #
-# Użycie: theme [day|night|toggle|status]   (bez argumentu = toggle)
+# Użycie: theme [day|night|light|toggle|status]   (bez argumentu = toggle)
 #   day   → Gruvbox Dark Hard   (jasne otoczenie, wysoki kontrast)
 #   night → Catppuccin Mocha    (miększy, po ciemku)
+#   light → Gruvbox Light Hard  (pełne słońce — jasne tło)
+# toggle przełącza day ⇄ night (codzienna para); light jest zawsze jawny,
+# a toggle z lighta wraca do day.
 set -euo pipefail
 
 STATE="$HOME/.config/theme-mode"
@@ -16,30 +19,39 @@ STARSHIP_TEMPLATE="$HOME/.config/starship.toml"
 STARSHIP_ACTIVE="${XDG_CACHE_HOME:-$HOME/.cache}/starship-active.toml"
 BAT_LOCAL="$HOME/.config/theme-bat"  # czytany przez .zshrc → BAT_THEME (i delta dziedziczy)
 
-nvim_day="gruvbox";            ghostty_day="Gruvbox Dark Hard";  starship_day="gruvbox_dark";      bat_day="gruvbox-dark"
-nvim_night="catppuccin-mocha"; ghostty_night="Catppuccin Mocha"; starship_night="catppuccin_mocha"; bat_night="Catppuccin Mocha"
+nvim_day="gruvbox";            ghostty_day="Gruvbox Dark Hard";    starship_day="gruvbox_dark";       bat_day="gruvbox-dark"
+nvim_night="catppuccin-mocha"; ghostty_night="Catppuccin Mocha";   starship_night="catppuccin_mocha"; bat_night="Catppuccin Mocha"
+nvim_light="gruvbox-light";    ghostty_light="Gruvbox Light Hard"; starship_light="gruvbox_light";    bat_light="gruvbox-light"
 
-current="$(cat "$STATE" 2>/dev/null || echo "$nvim_night")"
+current_scheme="$(cat "$STATE" 2>/dev/null || echo "$nvim_night")"
+case "$current_scheme" in
+  "$nvim_day")   current=day ;;
+  "$nvim_light") current=light ;;
+  *)             current=night ;;
+esac
 
 case "${1:-toggle}" in
   day|gruvbox)            mode=day ;;
   night|catppuccin|mocha) mode=night ;;
+  light|jasny|sun)        mode=light ;;
   toggle|"")
-    if [ "$current" = "$nvim_day" ]; then mode=night; else mode=day; fi ;;
+    if [ "$current" = night ]; then mode=day; else mode=night; fi
+    [ "$current" = light ] && mode=day ;;
   status)
-    echo "nvim:     $current"
+    echo "tryb:     $current"
+    echo "nvim:     $current_scheme"
     echo "ghostty:  $(cat "$GHOSTTY_LOCAL" 2>/dev/null || echo '(default z config)')"
     echo "starship: $(grep -m1 '^palette' "$STARSHIP_ACTIVE" 2>/dev/null || echo '(default z szablonu)')"
     echo "bat/delta: $(cat "$BAT_LOCAL" 2>/dev/null || echo '(default)')"
     exit 0 ;;
-  *) echo "użycie: theme [day|night|toggle|status]" >&2; exit 1 ;;
+  *) echo "użycie: theme [day|night|light|toggle|status]" >&2; exit 1 ;;
 esac
 
-if [ "$mode" = day ]; then
-  nvim_scheme="$nvim_day";   ghostty_theme="$ghostty_day";   starship_palette="$starship_day";   bat_theme="$bat_day"
-else
-  nvim_scheme="$nvim_night"; ghostty_theme="$ghostty_night"; starship_palette="$starship_night"; bat_theme="$bat_night"
-fi
+case "$mode" in
+  day)   nvim_scheme="$nvim_day";   ghostty_theme="$ghostty_day";   starship_palette="$starship_day";   bat_theme="$bat_day" ;;
+  night) nvim_scheme="$nvim_night"; ghostty_theme="$ghostty_night"; starship_palette="$starship_night"; bat_theme="$bat_night" ;;
+  light) nvim_scheme="$nvim_light"; ghostty_theme="$ghostty_light"; starship_palette="$starship_light"; bat_theme="$bat_light" ;;
+esac
 
 printf '%s\n' "$nvim_scheme" > "$STATE"
 printf 'theme = %s\n' "$ghostty_theme" > "$GHOSTTY_LOCAL"
@@ -53,10 +65,12 @@ if [ -f "$STARSHIP_TEMPLATE" ]; then
 fi
 
 # Zellij — przełącz motyw bieżącej sesji NA ŻYWO (sloty theme_dark/theme_light z config.kdl).
-# Tylko gdy jesteśmy w sesji ($ZELLIJ). Działa na bieżącą sesję; inne sesje doszlusują
-# przy własnym `theme` lub po starcie. day → light-slot (gruvbox), night → dark-slot (catppuccin).
+# Zellij ma TYLKO 2 sloty, a motywy mamy 3 → light-slot = gruvbox-light (tryb light,
+# jasny pasek tabów w słońcu), dark-slot = catppuccin-mocha dzielony przez day i night
+# (oba ciemne — ramka w day jest catppuccinowa, świadomy kompromis).
+# Tylko gdy jesteśmy w sesji ($ZELLIJ); inne sesje doszlusują przy własnym `theme`.
 if [ -n "${ZELLIJ:-}" ] && command -v zellij >/dev/null 2>&1; then
-  if [ "$mode" = day ]; then zellij action set-light-theme; else zellij action set-dark-theme; fi 2>/dev/null || true
+  if [ "$mode" = light ]; then zellij action set-light-theme; else zellij action set-dark-theme; fi 2>/dev/null || true
 fi
 
 # Przeładuj Ghostty (reload_config). Brak CLI do zdalnego sterowania → wysyłamy keystroke
