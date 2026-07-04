@@ -125,53 +125,6 @@ serve() { python3 -m http.server "${1:-8000}"; }
 # Znajdź plik po nazwie
 ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 
-# cj — picker sesji Claude'a w Zellij.
-# Output _cj.py: <display>\t<target_session>\t<my_session>\t<pane_id>\t<sid>
-# Header/spacer rows maja puste sid -> bail.
-#
-# Live metadata (nazwa sesji, tab, cwd) bierzemy z `zellij action list-panes -j`
-# w _cj.py, nie z env $ZELLIJ_SESSION_NAME (stale po rename). Stad target_session
-# i my_session sa zawsze aktualne. Zellij CLI z stale env failuje cicho —
-# uzywamy `--session <live_name>` zeby ominac stale socket path.
-cj() {
-  [[ -z "$ZELLIJ" ]] && { print -u2 "cj: wymaga Zellija"; return 1 }
-  command -v fzf >/dev/null || { print -u2 "cj: wymagany fzf"; return 1 }
-
-  local rows picked display target my_sess pane_id sid
-  rows="$(python3 "$HOME/.claude/hooks/_cj.py" 2>/dev/null)"
-  [[ -z "$rows" ]] && { print -u2 "cj: brak aktywnych Claude'ów"; return 1 }
-
-  picked="$(printf '%s\n' "$rows" \
-    | fzf --ansi --with-nth=1 --delimiter=$'\t' \
-          --prompt='Claude > ' --height=60% --reverse \
-          --no-hscroll --tiebreak=index)" || return 0
-
-  IFS=$'\t' read -r display target my_sess pane_id sid <<< "$picked"
-  [[ -z "$sid" ]] && return 0  # header / spacer
-
-  # Same session: focus-pane-id w mojej live-sesji. --session explicit
-  # zeby ominac stale env (po rename-session bez tego CLI hangs/fails).
-  if [[ -n "$my_sess" && "$target" == "$my_sess" ]]; then
-    zellij --session "$my_sess" action focus-pane-id "$pane_id" 2>/dev/null
-    return $?
-  fi
-
-  # Cross-session: switch do target. switch-session wykonuje sie w MOJEJ
-  # sesji (mial mnie do targetu przeniesc), wiec --session=my_sess.
-  if [[ -n "$target" ]]; then
-    if [[ -n "$my_sess" ]]; then
-      zellij --session "$my_sess" action switch-session "$target"
-    else
-      # Brak my_sess — fallback do env (moze byc stale, ale czesto OK).
-      zellij action switch-session "$target"
-    fi
-    return $?
-  fi
-
-  print -u2 "cj: brak target_session w wyborze (bug?)"
-  return 1
-}
-
 # claudet — odpal Claude'a w nowym tabie Zellija.
 # UWAGA: nie moze byc aliasem ani uzywac samego "claude" jako commandu, bo
 # `zellij action new-tab -- <cmd>` spawnuje proces uzywajac PATH-u zellij-servera
@@ -282,11 +235,13 @@ autoload -Uz add-zsh-hook && add-zsh-hook precmd _theme_refresh_bat
 # Zellij — synchronizuj motyw przy starcie każdego nowego pane/sesji.
 # Bez tego nowy pane zawsze startuje z domyślnym catppuccin-mocha (theme= w config.kdl),
 # ignorując stan ustawiony przez `theme`. Każdy nowy shell w Zelliju sourci .zshrc →
-# ten blok odpala raz i ustawia właściwy slot (set-light-theme=gruvbox / set-dark-theme=catppuccin).
+# ten blok odpala raz i ustawia właściwy slot. Mapowanie slotów (spójne z bin/theme
+# i config.kdl): tryb light → theme_light (gruvbox-light); day+night → theme_dark
+# (catppuccin-mocha — Zellij ma tylko 2 sloty na 3 motywy, świadomy kompromis).
 if [[ -n "${ZELLIJ:-}" ]] && command -v zellij >/dev/null 2>&1; then
   _zellij_sync_theme() {
     local mode; mode="$(cat ~/.config/theme-mode 2>/dev/null)"
-    if [[ "$mode" == "gruvbox" ]]; then
+    if [[ "$mode" == "gruvbox-light" ]]; then
       zellij action set-light-theme 2>/dev/null || true
     else
       zellij action set-dark-theme 2>/dev/null || true

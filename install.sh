@@ -244,14 +244,17 @@ cmd_stow() {
   ) || { info "Anulowano."; exit 0; }
 
   echo ""
+  # Anty-folding: wymuś realne katalogi-kontenery PRZED stow. Bez tego (świeży
+  # komp, gdy katalog nie istnieje) stow robi fold — podlinkowałby CAŁY katalog
+  # (~/.config, ~/.local, ~/.claude) na repo, a wszystko co pisze do środka
+  # (pliki stanu `theme`, runtime nvim w ~/.local/share, runtime Claude Code)
+  # lądowałoby fizycznie w repo. Realne katalogi zmuszają stow do linkowania
+  # per-plik/per-podkatalog — runtime zostaje poza repo.
+  mkdir -p "$TARGET_DIR/.config" "$TARGET_DIR/.local/bin"
+
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
     info "Stow: ${BOLD}$pkg${RESET}"
-    # `claude`: wymuś realny ~/.claude PRZED stow. Bez tego (świeży komp, gdy
-    # katalog nie istnieje) stow zrobiłby fold — podlinkowałby CAŁY ~/.claude na
-    # repo, a Claude Code zacząłby pisać runtime (sessions/cache/projects/…) do
-    # repo. Realny katalog zmusza stow do linkowania per-plik (tylko hooks/ +
-    # statusline-command.sh), runtime zostaje poza repo.
     [[ "$pkg" == "claude" ]] && mkdir -p "$TARGET_DIR/.claude"
     if stow -v -d "$DOTFILES_DIR" -t "$TARGET_DIR" "$pkg" 2>&1; then
       ok "$pkg zainstalowany"

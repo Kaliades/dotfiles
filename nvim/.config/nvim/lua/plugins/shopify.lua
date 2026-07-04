@@ -12,7 +12,13 @@ return {
     "neovim/nvim-lspconfig",
     opts = {
       servers = {
-        theme_check = {},
+        theme_check = {
+          -- Default cmd (theme-check-language-server) nie istnieje jako binarka
+          -- i mason nie ma dla niego mapowania — serwer dostarcza Shopify CLI
+          -- (brew "shopify", jest w Brewfile).
+          cmd = { "shopify", "theme", "language-server" },
+          mason = false,
+        },
       },
     },
   },

@@ -5,3 +5,10 @@ __pycache__/
 # Karabiner regeneruje te katalogi sam — trzymamy tylko karabiner.json
 karabiner/.config/karabiner/automatic_backups/
 karabiner/.config/karabiner/assets/
+
+# Claude Code — trackujemy TYLKO statusline. Siatka bezpieczeństwa: gdyby stow
+# kiedyś zrobił fold ~/.claude → repo (ręczny `stow claude` bez install.sh),
+# runtime (sessions/cache/projects/.credentials.json z tokenem OAuth!) nie może
+# trafić do publicznego repo.
+claude/.claude/*
+!claude/.claude/statusline-command.sh

@@ -15,6 +15,13 @@
 # zwykłe `*`, które nie przechodzi przez `/` → wtedy match by NIE zadziałał.
 [includeIf "hasconfig:remote.*.url:git@git.getprintbox.com:*/**"]
 	path = ~/.gitconfig-work
+# Ten sam host, pozostałe formy URL — scp-style powyżej NIE matchuje klonów
+# przez HTTPS ani jawne ssh:// (np. „Clone with HTTPS" w GitLabie); bez tych
+# bloków takie repo po cichu dostawałoby tożsamość prywatną.
+[includeIf "hasconfig:remote.*.url:https://git.getprintbox.com/**"]
+	path = ~/.gitconfig-work
+[includeIf "hasconfig:remote.*.url:ssh://git@git.getprintbox.com/**"]
+	path = ~/.gitconfig-work
 
 [core]
 	pager = delta
