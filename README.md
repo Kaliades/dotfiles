@@ -30,7 +30,7 @@ Na maszynie z już zainstalowanym Homebrew i Oh My Zsh wystarczy `brew install s
 | `ghostty`   | Konfiguracja terminala Ghostty                          |
 | `zellij`    | Konfiguracja multipleksera Zellij                       |
 | `git`       | `.gitconfig` (delta, side-by-side, split tożsamości) + Lazygit |
-| `zshrc`     | Zsh + Oh My Zsh + lazy-loaded NVM/pyenv; funkcje `claudet`/`zt` (nowy tab Zellija) i `wt` (git worktree z fzf) |
+| `zshrc`     | Zsh + Oh My Zsh + lazy-loaded NVM/pyenv; funkcje `work` (attach do Zellija), `claudet`/`zt` (nowy tab Zellija) i `wt` (git worktree z fzf) |
 | `starship`  | Prompt Starship (cross-shell, jedyny prompt)            |
 | `nvim`      | Neovim z LazyVim                                        |
 | `aerospace` | Konfiguracja AeroSpace (tiling WM)                      |

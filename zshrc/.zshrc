@@ -125,6 +125,16 @@ serve() { python3 -m http.server "${1:-8000}"; }
 # Znajdź plik po nazwie
 ff() { find . -type f -iname "*$1*" 2>/dev/null; }
 
+# work — wejdź do Zellija: attach do sesji "main", utwórz jeśli nie istnieje.
+# Ręczny odpowiednik dawnego auto-attacha z configu Ghostty (command = zellij
+# attach -c main) — teraz Ghostty startuje goły shell, a do Zellija wchodzisz
+# świadomie tą komendą.
+work() {
+  command -v zellij >/dev/null || { print -u2 "work: brak zellij w PATH"; return 127 }
+  [[ -n "$ZELLIJ" ]] && { print -u2 "work: już jesteś w Zelliju"; return 1 }
+  zellij attach -c main
+}
+
 # claudet — odpal Claude'a w nowym tabie Zellija.
 # UWAGA: nie moze byc aliasem ani uzywac samego "claude" jako commandu, bo
 # `zellij action new-tab -- <cmd>` spawnuje proces uzywajac PATH-u zellij-servera
