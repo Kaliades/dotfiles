@@ -63,6 +63,11 @@ if git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 
+# --- Model ---
+model_name=$(echo "$input" | jq -r '.model.display_name // .model.id // empty')
+model_part=""
+[ -n "$model_name" ] && model_part="${CYAN}󱚝 ${model_name}${RESET}"
+
 # --- Build top line ---
 top_line="$dir_part"
 [ -n "$ctx_part" ] && top_line="${top_line}${SEP}${ctx_part}"
@@ -113,6 +118,9 @@ if [ -z "$block_part" ]; then
 fi
 
 # --- Output ---
+bottom_line="$block_part"
+[ -n "$model_part" ] && bottom_line="${model_part}${SEP}${bottom_line}"
+
 out="$top_line"
-[ -n "$block_part" ] && out="${out}\n${block_part}"
+[ -n "$bottom_line" ] && out="${out}\n${bottom_line}"
 echo -e "$out"
