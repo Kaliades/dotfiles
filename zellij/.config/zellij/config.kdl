@@ -330,17 +330,20 @@ web_client {
  
 // Choose the theme that is specified in the themes section.
 // Default: default
-// 
+//
+// Ten plik to SZABLON (repo). Zellij czyta wygenerowaną kopię
+// ~/.cache/zellij-active.kdl (ZELLIJ_CONFIG_FILE w .zshrc), w której skrypt
+// `theme` podmienia TĘ linię: gruvbox-dark / catppuccin-mocha / gruvbox-light.
+// Zellij obserwuje swój plik configu → żywe sesje przemalowują się same.
+// Wartość tu = default świeżej maszyny (zanim pierwszy raz odpalisz `theme`).
+// Po edycji szablonu odpal `theme`, żeby przegenerować aktywny plik.
+//
+// UWAGA: celowo BEZ theme_dark/theme_light — gdy oba są ustawione, Zellij przy
+// każdym attachu pyta terminal HOSTA o jasność (CSI 996/2031) i sam przełącza
+// motyw sesji. Ghostty na macOS raportuje jasność SYSTEMU, nie motywu terminala,
+// więc attach po SSH wciskał gruvbox-light mimo trybu day. Bez slotów raport
+// hosta jest ignorowany — motyw kontroluje wyłącznie skrypt `theme`.
 theme "catppuccin-mocha"
- 
-// Sloty motywów przełączane RĘCZNIE przez skrypt `theme` (akcje set-dark-theme /
-// set-light-theme). Tryb macOS NIE jest ruszany — to tylko dwa sloty `zellij action`.
-// Motywy w stacku są TRZY (day/night/light), a sloty dwa, więc:
-//   light → theme_light (gruvbox-light — jasny pasek tabów w słońcu)
-//   day + night → theme_dark (catppuccin-mocha; ramka w day catppuccinowa — kompromis)
-// Oba wbudowane w Zellij. `theme` powyżej (catppuccin-mocha) = default dla nowej sesji.
-theme_dark "catppuccin-mocha"
-theme_light "gruvbox-light"
  
 // Choose the base input mode of zellij.
 // Default: normal

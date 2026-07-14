@@ -242,24 +242,18 @@ _theme_refresh_bat() { export BAT_THEME="$(_theme_bat)"; }
 _theme_refresh_bat
 autoload -Uz add-zsh-hook && add-zsh-hook precmd _theme_refresh_bat
 
-# Zellij — synchronizuj motyw przy starcie każdego nowego pane/sesji.
-# Bez tego nowy pane zawsze startuje z domyślnym catppuccin-mocha (theme= w config.kdl),
-# ignorując stan ustawiony przez `theme`. Każdy nowy shell w Zelliju sourci .zshrc →
-# ten blok odpala raz i ustawia właściwy slot. Mapowanie slotów (spójne z bin/theme
-# i config.kdl): tryb light → theme_light (gruvbox-light); day+night → theme_dark
-# (catppuccin-mocha — Zellij ma tylko 2 sloty na 3 motywy, świadomy kompromis).
-if [[ -n "${ZELLIJ:-}" ]] && command -v zellij >/dev/null 2>&1; then
-  _zellij_sync_theme() {
-    local mode; mode="$(cat ~/.config/theme-mode 2>/dev/null)"
-    if [[ "$mode" == "gruvbox-light" ]]; then
-      zellij action set-light-theme 2>/dev/null || true
-    else
-      zellij action set-dark-theme 2>/dev/null || true
-    fi
-  }
-  _zellij_sync_theme
-  unfunction _zellij_sync_theme
-fi
+# Zellij — config przekierowany na lokalny, generowany plik (~/.cache/zellij-active.kdl),
+# w którym `theme` podmienia linię `theme "..."` (pełne 3 motywy, jak starship niżej).
+# Zellij obserwuje ten plik → żywe sesje przemalowują się same, bez zellij action.
+# Celowo BEZ slotów theme_dark/theme_light w configu: z oboma slotami Zellij przy
+# każdym attachu pyta terminal HOSTA o jasność i sam przełącza motyw — Ghostty
+# raportuje jasność SYSTEMU macOS, więc attach po SSH wciskał gruvbox-light.
+# Świeża maszyna: seed kopią szablonu (default catppuccin-mocha); brak szablonu
+# (pakiet zellij niestowowany) → zmienna nieustawiona, zellij na swoich defaultach.
+_zellij_active="${XDG_CACHE_HOME:-$HOME/.cache}/zellij-active.kdl"
+[[ -f $_zellij_active ]] || { mkdir -p "${_zellij_active:h}" && cp ~/.config/zellij/config.kdl "$_zellij_active" 2>/dev/null }
+[[ -f $_zellij_active ]] && export ZELLIJ_CONFIG_FILE="$_zellij_active"
+unset _zellij_active
 
 # SSH agent + tmux (tylko sesje zdalne — na macOS launchd ogarnia agenta sam):
 # stabilna ścieżka do forwardowanego socketu agenta, żeby shelle w długo żyjącej
