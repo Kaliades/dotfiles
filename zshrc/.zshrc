@@ -234,8 +234,7 @@ wt() {
 # ============================================================================
 export ENABLE_LSP_TOOL=1
 export XDG_CONFIG_HOME="$HOME/.config"
-# bat (i delta — dziedziczy BAT_THEME, bo .gitconfig nie ustawia syntax-theme) za
-# przełącznikiem `theme`. Wartość trzyma lokalny plik ~/.config/theme-bat (poza repo);
+# bat za przełącznikiem `theme`. Wartość trzyma lokalny plik ~/.config/theme-bat (poza repo);
 # odświeżamy co prompt (precmd), więc po `theme` następne bat/fzf-preview/git diff łapią motyw.
 _theme_bat() { cat ~/.config/theme-bat 2>/dev/null || echo "Catppuccin Mocha"; }
 _theme_refresh_bat() { export BAT_THEME="$(_theme_bat)"; }
@@ -254,6 +253,16 @@ _zellij_active="${XDG_CACHE_HOME:-$HOME/.cache}/zellij-active.kdl"
 [[ -f $_zellij_active ]] || { mkdir -p "${_zellij_active:h}" && cp ~/.config/zellij/config.kdl "$_zellij_active" 2>/dev/null }
 [[ -f $_zellij_active ]] && export ZELLIJ_CONFIG_FILE="$_zellij_active"
 unset _zellij_active
+
+# herdr — motyw jedzie z generowanego ~/.config/herdr/config.toml (skrypt `theme`
+# robi go z stowowanego config.template.toml). Celowo BEZ HERDR_CONFIG_PATH:
+# serwer herdr zamraża ENV przy starcie, więc herdr odpalony ze starej zakładki
+# albo spoza zsh gubił motyw. Tu tylko seed świeżej maszyny (stow bez `theme`),
+# żeby herdr nie wystartował na własnych defaultach (prefix ctrl+b, zero bindów).
+_herdr_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/herdr/config.toml"  # herdr honoruje XDG
+[[ -f $_herdr_cfg || ! -f ~/.config/herdr/config.template.toml ]] \
+  || { mkdir -p "${_herdr_cfg:h}" && cp ~/.config/herdr/config.template.toml "$_herdr_cfg" } 2>/dev/null
+unset _herdr_cfg
 
 # SSH agent + tmux (tylko sesje zdalne — na macOS launchd ogarnia agenta sam):
 # stabilna ścieżka do forwardowanego socketu agenta, żeby shelle w długo żyjącej

@@ -12,3 +12,10 @@ karabiner/.config/karabiner/assets/
 # trafić do publicznego repo.
 claude/.claude/*
 !claude/.claude/statusline-command.sh
+
+# herdr — trackujemy TYLKO szablon. `config.toml` jest generowany przez `theme`
+# (per-urządzenie), a gdyby stow zrobił fold ~/.config/herdr → repo (ręczny
+# `stow herdr` bez install.sh), runtime (herdr.sock, *.log, session.json,
+# .plugins.lock) i tak nie trafi do repo.
+herdr/.config/herdr/*
+!herdr/.config/herdr/config.template.toml

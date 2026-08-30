@@ -24,30 +24,7 @@
 	path = ~/.gitconfig-work
 
 [core]
-	pager = delta
 	autocrlf = input
-
-[interactive]
-	diffFilter = delta --color-only
-
-[delta]
-	# Motyw składni: BRAK jawnego syntax-theme → delta dziedziczy $BAT_THEME,
-	# który przełącza skrypt `theme` (gruvbox-dark ⇄ Catppuccin Mocha). Dzięki temu
-	# diffy gita chodzą za tym samym przełącznikiem co reszta. Fallback bez env = default delty.
-
-	# Wygląd
-	line-numbers = true
-	side-by-side = true        # Widok dwóch kolumn
-	navigate = true            # 'n' i 'p' skaczą między plikami
-
-	# Styl obramowania i nagłówków (Hunk Headers)
-	hunk-header-style = omit   # Usuwa zbędne śmieci, zostawia czysty widok
-
-	hyperlinks = true          # klikalne ścieżki plików w terminalu
-	hyperlinks-file-link-format = "nvim://file/{path}:{line}"  # klik → skok do nvima
-	tabs = 4
-	true-color = always        # Ghostty to ogarnia
-	wrap-max-lines = unlimited # side-by-side nie ucina długich linii
 
 [merge]
 	conflictstyle = zdiff3

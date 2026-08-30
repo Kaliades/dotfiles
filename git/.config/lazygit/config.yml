@@ -1,6 +1,9 @@
 gui:
   language: "en"
-git:
-  pagers:
-    - colorArg: always
-      pager: delta --paging=never --no-gitconfig --syntax-theme="${BAT_THEME:-Catppuccin Mocha}" --navigate --hunk-header-style=omit --hyperlinks --true-color=always
+
+# Celowo BEZ `git.diffRenderers` (dawniej `git.pagers`) z deltą: diff view lazygita
+# jest u mnie rzadko używany, a każda zmiana schematu configu lazygita przepisuje
+# TEN plik w miejscu — czyli przez symlink prosto do repo (tak wjechała migracja
+# pagers → diffRenderers w 0.64.1). Mniej powierzchni = mniej niespodzianek w gicie.
+# Delta została wycofana z całego repo (2026-08) — git używa domyślnego pagera
+# (less), lazygit renderuje diffy własnym mechanizmem.

@@ -29,7 +29,8 @@ Na maszynie z już zainstalowanym Homebrew i Oh My Zsh wystarczy `brew install s
 |-------------|---------------------------------------------------------|
 | `ghostty`   | Konfiguracja terminala Ghostty                          |
 | `zellij`    | Konfiguracja multipleksera Zellij                       |
-| `git`       | `.gitconfig` (delta, side-by-side, split tożsamości) + Lazygit |
+| `herdr`     | Konfiguracja herdr (workspace manager dla agentów AI) — prefix `Ctrl+A`, bindy przeniesione z Zellija |
+| `git`       | `.gitconfig` (split tożsamości, merge/rerere) + Lazygit (język UI) |
 | `zshrc`     | Zsh + Oh My Zsh + lazy-loaded NVM/pyenv; funkcje `work` (attach do Zellija), `claudet`/`zt` (nowy tab Zellija) i `wt` (git worktree z fzf) |
 | `starship`  | Prompt Starship (cross-shell, jedyny prompt)            |
 | `nvim`      | Neovim z LazyVim                                        |

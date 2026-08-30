@@ -256,10 +256,28 @@ cmd_stow() {
     [[ -z "$pkg" ]] && continue
     info "Stow: ${BOLD}$pkg${RESET}"
     [[ "$pkg" == "claude" ]] && mkdir -p "$TARGET_DIR/.claude"
+    # herdr trzyma w ~/.config/herdr sockety, logi i session.json — realny katalog
+    # blokuje fold, żeby ten runtime nie lądował w repo obok config.toml
+    [[ "$pkg" == "herdr" ]] && mkdir -p "$TARGET_DIR/.config/herdr"
     if stow -v -d "$DOTFILES_DIR" -t "$TARGET_DIR" "$pkg" 2>&1; then
       ok "$pkg zainstalowany"
     else
       err "$pkg — błąd podczas stow (może konflikt plików?)"
+    fi
+    # Pakiet `herdr` czyta tylko <XDG_CONFIG_HOME>/herdr/config.toml, a stow kładzie
+    # obok sam szablon — więc zasiewamy config.toml, żeby herdr działał od razu po
+    # stow (bez tego startuje na własnych defaultach: prefix ctrl+b, zero bindów).
+    # Motyw ustawi później `theme`, podmieniając w tym pliku linię `name = `.
+    if [[ "$pkg" == "herdr" ]]; then
+      herdr_cfg="${XDG_CONFIG_HOME:-$TARGET_DIR/.config}/herdr/config.toml"
+      if [[ -f "$herdr_cfg" ]]; then
+        ok "herdr: config.toml już jest — zostawiam (motyw ustawi \`theme\`)"
+      elif mkdir -p "$(dirname "$herdr_cfg")" \
+        && cp "$TARGET_DIR/.config/herdr/config.template.toml" "$herdr_cfg"; then
+        ok "herdr: zasiano config.toml z szablonu"
+      else
+        warn "herdr: nie udało się zasiać config.toml — odpal ${BOLD}theme${RESET}"
+      fi
     fi
     # Pakiet `claude` wymaga dopięcia statusLine do (niestowowanego) settings.json
     [[ "$pkg" == "claude" ]] && claude_postinstall

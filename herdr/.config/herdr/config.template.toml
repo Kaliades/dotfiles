@@ -1,0 +1,122 @@
+# herdr — workspace manager dla agentów AI (https://herdr.dev)
+#
+# TEN PLIK TO SZABLON (repo → stowowany jako ~/.config/herdr/config.template.toml).
+# herdr czyta WYŁĄCZNIE ~/.config/herdr/config.toml (honoruje XDG_CONFIG_HOME).
+# Ten plik zasiewa tamten przy instalacji, a potem `theme` podmienia w NIM samą
+# linię `name = "..."`, w miejscu. Config.toml jest per-urządzenie i POZA repo.
+#
+# Dlaczego w miejscu, a nie regeneracja z szablonu (jak zellij/starship): herdr sam
+# dopisuje do config.toml ustawienia z Settings (prefix+s) — dźwięki, toasty, wygląd
+# sidebara. Nadpisanie szablonem kasowałoby je przy każdym przełączeniu motywu.
+#
+# DLACZEGO NIE HERDR_CONFIG_PATH (zmienna, którą herdr wspiera): serwer herdr
+# zamraża ENV przy starcie, więc każdy herdr odpalony ze starej zakładki, z panelu
+# herdr albo spoza zsh cicho spadał na szablon i ignorował motyw z `theme`.
+# Generowanie pod domyślną ścieżką działa niezależnie od tego, skąd startuje serwer.
+#
+# ⚠ Edycja TEGO pliku nie wchodzi sama do config.toml (patrz wyżej). Żeby weszła:
+#     rm ~/.config/herdr/config.toml && theme      # UWAGA: kasuje też ustawienia z Settings
+# Walidacja TEGO pliku:  HERDR_CONFIG_PATH=~/.config/herdr/config.template.toml herdr config check
+#     (samo `herdr config check` waliduje wygenerowany config.toml, nie szablon;
+#      zmienna jest tu bezpieczna — dotyczy jednego wywołania CLI, nie serwera)
+# Pełna lista opcji:      herdr --default-config
+# Przeładowanie żywego serwera: herdr server reload-config  (robi to skrypt `theme`)
+
+[theme]
+# Motywy: catppuccin, catppuccin-latte, terminal, tokyo-night, tokyo-night-day,
+#         dracula, nord, gruvbox, gruvbox-light, one-dark, one-light, solarized,
+#         solarized-light, kanagawa, kanagawa-lotus, rose-pine, rose-pine-dawn, vesper
+#
+# Skrypt `theme` podmienia TĘ linię:
+#   day   → gruvbox        (Gruvbox Dark Hard w Ghostty/nvim)
+#   night → catppuccin     (Catppuccin Mocha)
+#   light → gruvbox-light  (Gruvbox Light Hard)
+# Wartość tutaj = default świeżej maszyny (seed po `stow`, przed pierwszym `theme`).
+# Uwaga: reszta stacku ma w defaultach catppuccina (Ghostty, Zellij, starship),
+# więc do czasu pierwszego `theme day` herdr będzie jedynym gruvboxem.
+name = "gruvbox"
+
+# UWAGA: celowo BEZ auto_switch/dark_name/light_name. auto_switch pyta terminal
+# HOSTA o jasność, a Ghostty na macOS raportuje jasność SYSTEMU, nie motywu
+# terminala — ta sama pułapka, przez którą Zellij nie ma slotów theme_dark/
+# theme_light (attach po SSH wciskał jasny motyw mimo trybu day).
+# Motywem steruje wyłącznie skrypt `theme`.
+
+[keys]
+# Prefix jak w tmuxie/screenie: Ctrl+A (default herdr to ctrl+b).
+# Kosztuje beginning-of-line w shellu — w zsh zostaje Home / Ctrl+X Ctrl+A.
+prefix = "ctrl+a"
+
+# Bindy dwutorowo, tak jak w Zelliju:
+#   • prefix+…  → tryb prefiksowy (rzadsze operacje, bezpieczne dla apek w panelu)
+#   • alt+…     → bezpośrednio, 1:1 z codziennymi bindami z Zellija (Ghostty ma
+#                 macos-option-as-alt = true, więc Option działa jak Alt)
+# Alt+f / Alt+b / Alt+d celowo NIEZWIĄZANE — zostają dla zsh (ruch po słowach).
+
+# ── Sesja / UI ──────────────────────────────────────────────────────────────
+help = "prefix+?"                 # ściąga bindów (zastępuje cheatsheet.md z Zellija)
+settings = "prefix+s"
+detach = "prefix+q"               # Zellij: Ctrl+O d
+reload_config = "prefix+shift+r"
+toggle_sidebar = "prefix+b"
+open_notification_target = "prefix+o"
+
+# ── Workspace'y (odpowiednik sesji/projektów) ───────────────────────────────
+workspace_picker = ["prefix+w", "alt+s"]   # Alt+S = session manager z Zellija
+goto = "prefix+g"
+new_workspace = "prefix+shift+n"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+shift+d"
+previous_workspace = "alt+["               # slot po Alt+[ / Alt+] (swap layouts w Zelliju)
+next_workspace = "alt+]"
+switch_workspace = "prefix+shift+1..9"
+new_worktree = "prefix+shift+g"
+
+# ── Taby ────────────────────────────────────────────────────────────────────
+new_tab = ["prefix+c", "alt+\\"]           # Alt+\ = NewTab z Zellija
+rename_tab = ["prefix+shift+t", "prefix+,"]
+previous_tab = ["prefix+p", "alt+,"]
+next_tab = ["prefix+n", "alt+."]
+switch_tab = "prefix+1..9"                 # Zellij: Ctrl+T → 1..9
+close_tab = "prefix+shift+x"
+move_tab_previous = "alt+i"                # Alt+I / Alt+O z Zellija
+move_tab_next = "alt+o"
+
+# ── Panele ──────────────────────────────────────────────────────────────────
+focus_pane_left = ["prefix+h", "alt+h"]
+focus_pane_down = ["prefix+j", "alt+j"]
+focus_pane_up = ["prefix+k", "alt+k"]
+focus_pane_right = ["prefix+l", "alt+l"]
+swap_pane_left = "prefix+shift+h"          # Zellij: tryb MOVE (Ctrl+H) + hjkl
+swap_pane_down = "prefix+shift+j"
+swap_pane_up = "prefix+shift+k"
+swap_pane_right = "prefix+shift+l"
+cycle_pane_next = "prefix+tab"
+cycle_pane_previous = "prefix+shift+tab"
+last_pane = "prefix+space"
+split_vertical = ["prefix+v", "alt+n"]     # Alt+N = nowy pane z Zellija
+split_horizontal = ["prefix+minus", "alt+shift+n"]
+close_pane = ["prefix+x", "alt+w"]         # Alt+W = CloseFocus z Zellija
+zoom = ["prefix+z", "alt+z"]               # Zellij: tryb PANE → f (fullscreen)
+rename_pane = "prefix+shift+p"
+edit_scrollback = "prefix+e"               # Zellij: tryb SCROLL → e
+copy_mode = ["prefix+[", "ctrl+s"]         # Ctrl+S = tryb SCROLL z Zellija.
+                                           # Zabiera <C-s> apkom w panelu (np. save
+                                           # w LazyVimie) — skasuj "ctrl+s" jeśli wolisz.
+resize_mode = "prefix+r"
+resize_pane_left = "alt+shift+h"           # Zellij: Alt+- / Alt++ (tu kierunkowo)
+resize_pane_down = "alt+shift+j"
+resize_pane_up = "alt+shift+k"
+resize_pane_right = "alt+shift+l"
+
+# Popup z lazygitem — odpowiednik floating pane'a z Zellija. `alt+g` jest wolne
+# i w herdr (wszystkie defaulty są prefiksowe), i w zsh. Popup dziedziczy cwd
+# panelu, więc lazygit otwiera repo, w którym stoisz; wyjście `q` zamyka popup.
+# type: "popup" = modal bez ruszania layoutu | "pane" = tymczasowy panel | "shell" = w tle
+[[keys.command]]
+key = "alt+g"
+type = "popup"
+command = "lazygit"
+description = "lazygit"
+width = "80%"
+height = "80%"
