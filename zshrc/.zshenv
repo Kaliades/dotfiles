@@ -4,6 +4,12 @@
 # reszta środowiska siedzi w .zshrc.
 # ============================================================================
 
+# Toolchain rustupa (cargo, rustc, a na Linuksie także binarka `zellij`) — rustup
+# trzyma je w ~/.cargo/bin i dostarcza własny skrypt ustawiający PATH. Guard robi
+# z tego no-op tam, gdzie rustupa nie ma (na macOS te narzędzia idą z brew), a sam
+# skrypt jest idempotentny — przy wielokrotnym źródłowaniu nie duplikuje wpisu.
+[[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
+
 # SSH agent na maszynach zdalnych (na macOS launchd ogarnia agenta sam):
 # stabilna ścieżka do forwardowanego socketu, żeby shelle w długo żyjącej sesji
 # multipleksera (Zellij, herdr) przeżywały reconnect — SSH_AUTH_SOCK zmienia się
