@@ -93,6 +93,22 @@ fi
 # Świadomie bez HERDR_CONFIG_PATH: serwer herdr zamraża ENV przy starcie, więc
 # herdr odpalony ze starej zakładki/panelu cicho spadał na szablon i ignorował motyw.
 # herdr NIE obserwuje pliku → żywy serwer trzeba szturchnąć reload-configiem.
+# `herdr server reload-config` bez --session gada wyłącznie z sesją `default`.
+# Sesja nazwana (`herdr --session main`) ma własny socket w sessions/<nazwa>/, więc
+# bez tej pętli żywy panel zostawał ze starym motywem, a błąd szedł do /dev/null.
+# Pusta lista (starszy herdr bez `session list`) → fallback na dawne wywołanie.
+reload_herdr_sessions() {
+  local running_sessions session
+  running_sessions="$(herdr session list 2>/dev/null | awk 'NR > 1 && $2 == "running" { print $1 }' || true)"
+  if [ -z "$running_sessions" ]; then
+    herdr server reload-config >/dev/null 2>&1 || true
+    return
+  fi
+  for session in $running_sessions; do
+    herdr --session "$session" server reload-config >/dev/null 2>&1 || true
+  done
+}
+
 herdr_src="$HERDR_ACTIVE"
 [ -f "$herdr_src" ] || herdr_src="$HERDR_TEMPLATE"
 if [ -f "$herdr_src" ]; then
@@ -100,7 +116,7 @@ if [ -f "$herdr_src" ]; then
   herdr_tmp="$(mktemp)"
   if sed "s/^name = .*/name = \"$herdr_theme\"/" "$herdr_src" > "$herdr_tmp"; then
     mv "$herdr_tmp" "$HERDR_ACTIVE"
-    command -v herdr >/dev/null 2>&1 && herdr server reload-config >/dev/null 2>&1 || true
+    command -v herdr >/dev/null 2>&1 && reload_herdr_sessions || true
   else
     rm -f "$herdr_tmp"
   fi
