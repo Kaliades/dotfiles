@@ -43,9 +43,15 @@ name = "gruvbox"
 # Motywem steruje wyłącznie skrypt `theme`.
 
 [keys]
-# Prefix jak w tmuxie/screenie: Ctrl+A (default herdr to ctrl+b).
-# Kosztuje beginning-of-line w shellu — w zsh zostaje Home / Ctrl+X Ctrl+A.
-prefix = "ctrl+a"
+# Prefix: Ctrl+Space (default herdr to ctrl+b).
+# NIE ctrl+a (klasyka z tmuxa): Ghostty domyślnie mapuje Cmd+← / Cmd+→ na
+# `text:\x01` / `text:\x05`, czyli dokładnie Ctrl+A / Ctrl+E — więc z prefiksem
+# ctrl+a macOS-owe „skocz na początek linii" wchodziło w tryb prefiksowy herdra
+# zamiast do zsh. Ctrl+Space nie koliduje ani z Ghostty, ani z ruchem po linii.
+# UWAGA na macOS: Ctrl+Space bywa zajęty systemowo przez „Select previous input
+# source" (Settings → Keyboard → Shortcuts → Input Sources) — odznacz, jeśli
+# masz więcej niż jeden układ klawiatury, inaczej herdr nigdy nie zobaczy bindu.
+prefix = "ctrl+space"
 
 # Bindy dwutorowo, tak jak w Zelliju:
 #   • prefix+…  → tryb prefiksowy (rzadsze operacje, bezpieczne dla apek w panelu)
